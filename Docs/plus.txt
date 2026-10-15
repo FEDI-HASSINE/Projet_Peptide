@@ -1,0 +1,124 @@
+Un corpus est l'ensemble des séquences de peptides collectées (ici via UniProt et d'autres bases), avec leur provenance (source, date, requête, licence, nombre de lignes, empreinte SHA-256).
+
+Un corpus propre est ce même corpus après traitement :
+
+filtré par regex ^[ACDEFGHIKLMNPQRSTVWY]+$ et longueur 10–50
+NaN supprimés avant toute conversion en chaîne
+doublons exacts et quasi-doublons identifiés (index 3-mers + Levenshtein)
+toxines (conotoxines, etc.) signalées ou exclues
+exporté en CSV (sequence, source, id) dans data/processed/
+documenté dans PROVENANCE.md et reproductible depuis data/raw/
+
+
+Résumé en une phrase
+On téléporte des peptides du web → on jette les invalides → on enlève les doublons → on calcule leurs propriétés → on sauvegarde un fichier
+ propre et reproductible.
+
+
+
+ n mots simples : set_seed(42) verrouille le hasard.
+
+Dans ce pipeline, l'ordinateur doit faire des choix aléatoires (mélanger les données, séparer en train/test/validation, etc.). Sans cette fonction, si vous relancez le code demain, vous obtiendrez des résultats différents parce que le hasard a choisi autre chose.
+
+Avec set_seed(42) :
+
+Le "dé" est toujours lancé de la même manière
+Les 4 étudiants obtiennent exactement les mêmes comptages
+Le pipeline est reproductible : on peut relancer depuis data/raw/ et retrouver les mêmes fichiers propres
+
+
+C'est un fichier qui liste, pour chacune des 20 lettres d'acides aminés (A, C, D, E...), leurs propriétés physiques et chimiques :
+
+Leur poids (masse monoisotopique)
+Leur charge (pKa)
+Leur affinité pour l'eau (échelle Kyte-Doolittle)
+Leur moment hydrophobe (échelle Eisenberg)
+À quoi ça sert dans le pipeline ?
+
+Tous les autres modules ont besoin de ces nombres pour calculer quoi que ce soit :
+
+descriptors.py calcule la GRAVY, la charge, le pI, la masse → il puise dans constants.py
+stats.py calcule la composition → il utilise la liste des 20 acides aminés
+pwm.py utilise la composition de fond → elle vient de constants.py
+a faire une recherche et donner signification de chacun d'eux
+
+
+
+c'est aller chercher des peptides sur Internet.
+
+Concrètement :
+
+On interroge UniProt (une énorme base de données publique de protéines et peptides) via une adresse web (l'API REST).
+On lui demande : « donne-moi uniquement les séquences de 10 à 50 acides aminés, avec leur identifiant, leur séquence et leur longueur ».
+Comme il y a trop de résultats pour un seul envoi, on les reçoit par paquets de 500 (pagination) jusqu'à tout récupérer.
+On privilégie d'abord les entrées reviewed:true (vérifiées à la main par des experts), puis reviewed:false si besoin (non vérifiées mais utiles).
+On sauvegarde le fichier tel quel dans data/raw/uniprot_*.tsv sans jamais le modifier.
+On note combien de lignes on a récupérées.
+À quoi ça sert dans le pipeline ? C'est la matière première. Sans T7, il n'y a pas de peptides à nettoyer, ni à analyser. Toutes les étapes suivantes (filtrage, descripteurs, statistiques) partent de ce fichier brut.
+
+
+
+
+
+T8 — Base secondaire (choisir une seule pour la semaine)
+
+APD3 (Antimicrobial Peptide Database) — peptides antimicrobiens avec séquence et activité
+DBAASP — Database of Antimicrobial Activity and Structure of Peptides
+DRAMP — Database of Antimicrobial Peptides and Resistance
+Recommandation : prendre APD3 comme source principale cette semaine. Si sa licence bloque le téléchargement ou la redistribution, basculer sur DBAASP ou DRAMP. Consigner la licence choisie dans PROVENANCE.md.
+
+T9 — Source non pharmaceutique (choisir une seule pour la semaine)
+
+BIOPEP-UWM — peptides bioactifs d’origine alimentaire (Université de technologie de Varsovie)
+BACTIBASE — bactériocines d’acide lactique (LAB), usage en biopreservation
+Recommandation : BIOPEP-UWM pour les peptides alimentaires bioactifs ; BACTIBASE si le groupe se concentre sur les bactériocines de biopreservation. Vérifier les conditions d’usage et de redistribution avant téléchargement, et consigner la licence dans PROVENANCE.md.
+de plus donner la difference entre les  type
+
+
+
+En mots simples : T17 compare la "recette" (proportion de chaque acide aminé) de chaque source de peptides.
+
+Résultat 0 : les deux sources sont identiques.
+Résultat élevé (max ≈ 0,69) : elles sont très différentes.
+À quoi ça sert : répondre à la question d'analyse — "Les peptides pharma (AMP) et non-pharma sont-ils composés différemment ?" Si JS est élevé entre UniProt et BIOPEP, les deux familles ne se ressemblent pas.
+
+
+
+T18 — Descripteurs (T4 dépendant)
+Pour chaque peptide, on calcule des nombres simples qui le décrivent : son poids, sa charge électrique, s’il aime ou déteste l’eau (GRAVY), sa forme en hélice (moment hydrophobe), sa capacité à se lier aux protéines (Boman), et son point de neutralité (pI).
+Rôle dans le pipeline : donner une carte d’identité physico-chimique à chaque peptide.
+
+T19 — Tester les descripteurs
+On vérifie les calculs sur des petits peptides dont on connaît le résultat à la main (ex: GRAVY de "A" = 1,8).
+Rôle : s’assurer que le code ne dit pas n’importe quoi avant de l’utiliser sur tout le corpus.
+
+T20 — PWM (profil des extrémités)
+On regarde quelles lettres reviennent souvent au début et à la fin des peptides, position par position, sans tronquer les séquences.
+Rôle : repérer des motifs conservés aux bords des peptides.
+
+T21 — Figures
+On dessine des graphiques : histogrammes des descripteurs, heatmap de la PWM, courbe d’information par position.
+Rôle : voir visuellement si les sources de peptides se ressemblent ou diffèrent.
+
+
+
+
+T22 — Doublons exacts
+On enlève les copies identiques (même séquence lettre pour lettre) pour ne pas compter plusieurs fois le même peptide. On calcule le taux de redondance par source et entre sources.
+Sert à : savoir combien de peptides uniques on a vraiment.
+
+T23 — Quasi-doublons
+On cherche les séquences très proches (pas identiques, mais très similaires) : on repère rapidement les candidats qui partagent un petit bout de 3 lettres (3-mers), puis on mesure leur distance exacte (Levenshtein).
+Sert à : détecter les peptides qui se ressemblent à 90 % ou plus.
+
+T24 — Tester la redondance + entropie de composition
+On vérifie que la détection des doublons marche bien, et on calcule la diversité des acides aminés dans le corpus (entropie).
+Sert à : valider le code de détection et mesurer si le corpus est varié ou répétitif.
+
+T25 — Taux de quasi-doublons à 90 %
+On rapporte combien de peptides sont quasi-identiques à 90 %, et on explique par écrit pourquoi le regroupement complet (clustering union-find) sera fait le mois 2, pas maintenant.
+Sert à : quantifier la similarité du corpus et justifier le report du clustering.
+
+T26 — Notebook NB01 version peptides
+On crée un notebook Jupyter qui appelle simplement peplib (imports et appels uniquement). Aucun calcul n'est recopié dans les cellules du notebook.
+Sert à : montrer le pipeline en action, sans mélanger la logique métier et la présentation.
