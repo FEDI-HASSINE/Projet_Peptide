@@ -1,4 +1,4 @@
-﻿import pytest
+import pytest
 
 from peplib.constants import (
     AMINO_ACIDS,

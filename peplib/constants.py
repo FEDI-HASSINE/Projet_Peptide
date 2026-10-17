@@ -1,4 +1,4 @@
-﻿"""
+"""
 Références physico-chimiques des 20 acides aminés standards.
 """
 
