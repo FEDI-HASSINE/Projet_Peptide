@@ -4,6 +4,7 @@ Références physico-chimiques des 20 acides aminés standards.
 
 # Les 20 acides aminés standards, en code à une lettre.
 AMINO_ACIDS = tuple("ACDEFGHIKLMNPQRSTVWY")
+AA_LIST = AMINO_ACIDS
 
 # Masse monoisotopique du résidu (Da), sans H2O.
 # Source : ExPASy FindMod, Amino acids — Monoisotopic masses.
@@ -15,6 +16,7 @@ MONOISOTOPIC_RESIDUE_MASS = {
     "M": 131.04049, "F": 147.06841, "P": 97.05276, "S": 87.03203,
     "T": 101.04768, "W": 186.07931, "Y": 163.06333, "V": 99.06841,
 }
+MASS = MONOISOTOPIC_RESIDUE_MASS
 
 # pKa des chaînes latérales ionisables.
 # Valeurs conformes au cahier des charges du projet.
