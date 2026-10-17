@@ -14,7 +14,7 @@ Ce document retrace l'origine, les requêtes, les licences et les empreintes cry
 - **Nombre de lignes brutes** : 12 424 (12 423 séquences + 1 ligne d'en-tête)
 - **Empreinte SHA-256 du fichier brut** : `397959390c4ca2e6f55c5356e281f849398de0461328082f7549e2e1ad42f285`
 - **Fichier brut sauvegardé sous** : `data/raw/uniprot_reviewed_20261017.tsv`
-- **Téléchargement manuel ?** : Non (script `download_uniprot.py` avec pagination via en-tête `Link`).
+- **Téléchargement manuel ?** : Non (module `python -m peplib.download_uniprot` avec pagination via en-tête `Link`).
 - **Notes (Biosécurité)** : Le champ `keyword` et `protein_name` sont récupérés afin d'identifier et de signaler/exclure les toxines (ex. conotoxines, `KW-0800`) lors du prétraitement génératif.
 
 ---
@@ -30,7 +30,7 @@ Ce document retrace l'origine, les requêtes, les licences et les empreintes cry
 - **Nombre de lignes brutes** : 3 609 (3 608 séquences + 1 ligne d'en-tête)
 - **Empreinte SHA-256 du fichier brut** : `ef21ecd472244cbd68d101651405ea90efd8f8e445fbe08b0769530dffe00134`
 - **Fichier brut sauvegardé sous** : `data/raw/amp_database_20261017.tsv`
-- **Téléchargement manuel ?** : Non (script `download_t8_t9.py` avec pagination).
+- **Téléchargement manuel ?** : Non (module `python -m peplib.download_t8_t9` avec pagination).
 - **Notes** : Contient des séquences de toutes longueurs ; le filtrage sur la fenêtre de longueur [10, 50] et sur l'alphabet canonique des 20 acides aminés est appliqué à l'étape C (T12–T14).
 
 ---
@@ -46,7 +46,7 @@ Ce document retrace l'origine, les requêtes, les licences et les empreintes cry
 - **Nombre de lignes brutes** : 787 (786 séquences + 1 ligne d'en-tête)
 - **Empreinte SHA-256 du fichier brut** : `3832363fd7db973a4742a8dbea1335fccac19f65de4bccaed4f39d24e1ffceb4`
 - **Fichier brut sauvegardé sous** : `data/raw/bactibase_bacteriocins_20261017.tsv`
-- **Téléchargement manuel ?** : Non (script `download_t8_t9.py` avec pagination).
+- **Téléchargement manuel ?** : Non (module `python -m peplib.download_t8_t9` avec pagination).
 - **Notes** : Cible les peptides de bioconservation alimentaire (bactériocines). Le filtrage strict sur la longueur 10–50 et les caractères non standards est effectué dans `peplib/filters.py`.
 
 ---
@@ -57,7 +57,7 @@ UniProt contient des toxines (conotoxines notamment). Conformément au cahier de
 charges, elles sont **signalées** et doivent être exclues du corpus génératif ;
 aucune séquence de type toxine ne sera diffusée.
 
-- **Script de génération** : `check_toxins.py` (simple point d'entrée) → logique dans `peplib/biosafety.py`, tests dans `tests/test_biosafety.py`.
+- **Script de génération** : `python -m peplib.check_toxins` (simple point d'entrée) → logique dans `peplib/biosafety.py`, tests dans `tests/test_biosafety.py`.
 - **Fichier de sortie** : `data/processed/toxin_flags.json` — une entrée `{"Entry": ..., "is_toxin": bool}` par séquence.
 - **Méthode** : concaténation de toutes les colonnes textuelles de chaque entrée, puis recherche insensible à la casse du motif `Toxin|Conotoxin`.
 - **Empreinte SHA-256 de la sortie** : `9c1182834dc9d1dbedfd9248704c5bd630f33e43ab7e39aac5087d9e5685a626`

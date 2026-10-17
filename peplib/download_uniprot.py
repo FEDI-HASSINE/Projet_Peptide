@@ -1,6 +1,9 @@
 """
 Point d'entrée T7 : télécharge le corpus général depuis UniProtKB.
 
+Usage :
+    python -m peplib.download_uniprot
+
 La logique vit dans :mod:`peplib.download` et est couverte par
 ``tests/test_download.py``.
 """
@@ -8,7 +11,7 @@ La logique vit dans :mod:`peplib.download` et est couverte par
 from peplib.download import compute_sha256, count_lines, download_t7, raw_path
 
 
-if __name__ == "__main__":
+def main():
     filepath = raw_path("uniprot_reviewed")
 
     print("Début du téléchargement depuis UniProt (T7)...")
@@ -26,3 +29,7 @@ if __name__ == "__main__":
     )
     print(f"Empreinte SHA-256 : {sha256}")
     print("=" * 50)
+
+
+if __name__ == "__main__":
+    main()

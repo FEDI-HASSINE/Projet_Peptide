@@ -1,9 +1,9 @@
 """
 Acquisition des corpus bruts depuis l'API REST UniProt (T7, T8, T9).
 
-Toute la logique de téléchargement, de pagination et d'empreinte vit ici ;
-les scripts à la racine (``download_uniprot.py``, ``download_t8_t9.py``) ne
-sont que des points d'entrée.
+Toute la logique de téléchargement, de pagination et d'empreinte vit ici.
+Les points d'entrée exécutables sont ``peplib/download_uniprot.py`` (T7) et
+``peplib/download_t8_t9.py`` (T8/T9), lancés via ``python -m``.
 """
 
 import hashlib
