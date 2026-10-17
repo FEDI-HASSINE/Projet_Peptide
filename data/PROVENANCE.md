@@ -48,3 +48,26 @@ Ce document retrace l'origine, les requêtes, les licences et les empreintes cry
 - **Fichier brut sauvegardé sous** : `data/raw/bactibase_bacteriocins_20261017.tsv`
 - **Téléchargement manuel ?** : Non (script `download_t8_t9.py` avec pagination).
 - **Notes** : Cible les peptides de bioconservation alimentaire (bactériocines). Le filtrage strict sur la longueur 10–50 et les caractères non standards est effectué dans `peplib/filters.py`.
+
+---
+
+## Biosécurité — signalement des toxines (T10)
+
+UniProt contient des toxines (conotoxines notamment). Conformément au cahier des
+charges, elles sont **signalées** et doivent être exclues du corpus génératif ;
+aucune séquence de type toxine ne sera diffusée.
+
+- **Script de génération** : `check_toxins.py` (simple point d'entrée) → logique dans `peplib/biosafety.py`, tests dans `tests/test_biosafety.py`.
+- **Fichier de sortie** : `data/processed/toxin_flags.json` — une entrée `{"Entry": ..., "is_toxin": bool}` par séquence.
+- **Méthode** : concaténation de toutes les colonnes textuelles de chaque entrée, puis recherche insensible à la casse du motif `Toxin|Conotoxin`.
+- **Empreinte SHA-256 de la sortie** : `9c1182834dc9d1dbedfd9248704c5bd630f33e43ab7e39aac5087d9e5685a626`
+- **Résultat sur le corpus T7** : 1 921 entrées signalées sur 12 423, dont **340/340 conotoxines** (`protein_name` contenant « conotoxin »).
+
+### Reproductibilité des empreintes
+
+`core.autocrlf` convertit par défaut les fins de ligne en CRLF sous Windows, ce
+qui rendait les SHA-256 ci-dessus invérifiables sur un poste Windows. Le fichier
+`.gitattributes` neutralise cette conversion pour `data/raw/*.tsv` et
+`data/processed/*.json` : les empreintes sont désormais identiques sur tous les
+systèmes. Les valeurs ci-dessus sont celles des fichiers tels qu'ils sont
+versionnés (fins de ligne LF).
