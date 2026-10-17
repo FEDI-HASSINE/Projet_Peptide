@@ -1,7 +1,9 @@
 import pytest
 
 from peplib.constants import (
+    AA_LIST,
     AMINO_ACIDS,
+    MASS,
     MONOISOTOPIC_RESIDUE_MASS,
     SIDE_CHAIN_PKA,
     N_TERMINUS_PKA,
@@ -14,6 +16,17 @@ from peplib.constants import (
 def test_twenty_standard_amino_acids():
     assert len(AMINO_ACIDS) == 20
     assert len(set(AMINO_ACIDS)) == 20
+    assert set(AA_LIST) == set("ACDEFGHIKLMNPQRSTVWY")
+
+
+def test_masses_positive_and_complete():
+    assert len(MASS) == 20
+    assert all(m > 0 for m in MASS.values())
+
+
+def test_scales_have_20_values():
+    assert len(KYTE_DOOLITTLE) == 20
+    assert len(EISENBERG) == 20
 
 
 @pytest.mark.parametrize(
