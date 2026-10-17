@@ -1,0 +1,5 @@
+# Les fichiers de données ne doivent pas subir de conversion de fins de ligne :
+# les empreintes SHA-256 consignées dans data/PROVENANCE.md doivent pouvoir être
+# revérifiées à l'identique sur tout système (Windows compris).
+data/raw/*.tsv -text
+data/processed/*.json -text
