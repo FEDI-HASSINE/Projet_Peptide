@@ -19,9 +19,10 @@ Ce document retrace l'origine, les requêtes, les licences et les empreintes cry
 
 ---
 
-## Source 2 : Base de Peptides Antimicrobiens — Profil Pharmaceutique (T8)
+## Source 2 : Peptides antimicrobiens extraits d'UniProtKB — Profil Pharmaceutique (T8)
 
-- **Nom de la source** : Référentiel AMP curé (Peptides antimicrobiens / Antibiotiques `KW-0929` & `KW-0044`, équivalent DRAMP/APD3)
+- **Nom de la source** : UniProtKB (API REST), filtré par les mots-clés `KW-0929` (Antimicrobial) et `KW-0044` (Antibiotic), `reviewed:true`
+- **Base dédiée de référence (non utilisée)** : APD3 / DBAASP / DRAMP n'ont pas été téléchargées cette semaine. UniProt a été retenu pour disposer d'une API REST unique, reproductible et sous licence CC BY 4.0. **Écart assumé au cahier des charges T8**, à substituer par une base dédiée si le coordinateur l'exige.
 - **URL de requête** : `https://rest.uniprot.org/uniprotkb/search?query=(keyword:KW-0929 OR keyword:KW-0044) AND reviewed:true&format=tsv&fields=accession,sequence,length,protein_name,organism_name&size=500`
 - **Date de téléchargement** : 17/10/2026
 - **Version de la base** : Release 2026
@@ -34,9 +35,10 @@ Ce document retrace l'origine, les requêtes, les licences et les empreintes cry
 
 ---
 
-## Source 3 : Bactériocines de bioconservation — Profil Non-Pharmaceutique (T9)
+## Source 3 : Bactériocines extraites d'UniProtKB — Profil Non-Pharmaceutique (T9)
 
-- **Nom de la source** : Référentiel Bactériocines (type BACTIBASE / `KW-0078` Bacteriocin — bioconservation alimentaire)
+- **Nom de la source** : UniProtKB (API REST), filtré par le mot-clé `KW-0078` (Bacteriocin)
+- **Base dédiée de référence (non utilisée)** : BIOPEP-UWM / BACTIBASE n'ont pas été téléchargées cette semaine. UniProt a été retenu pour la même raison qu'en Source 2. **Écart assumé au cahier des charges T9**, à substituer par une base dédiée si le coordinateur l'exige.
 - **URL de requête** : `https://rest.uniprot.org/uniprotkb/search?query=keyword:KW-0078 AND length:[5 TO 100]&format=tsv&fields=accession,sequence,length,protein_name,organism_name&size=500`
 - **Date de téléchargement** : 17/10/2026
 - **Version de la base** : Release 2026
