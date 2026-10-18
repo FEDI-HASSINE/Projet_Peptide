@@ -1,13 +1,13 @@
 """
-Références physico-chimiques des 20 acides aminés standards.
+RÃ©fÃ©rences physico-chimiques des 20 acides aminÃ©s standards.
 """
 
-# Les 20 acides aminés standards, en code à une lettre.
+# Les 20 acides aminÃ©s standards, en code Ã  une lettre.
 AMINO_ACIDS = tuple("ACDEFGHIKLMNPQRSTVWY")
 AA_LIST = AMINO_ACIDS
 
-# Masse monoisotopique du résidu (Da), sans H2O.
-# Source : ExPASy FindMod, Amino acids — Monoisotopic masses.
+# Masse monoisotopique du rÃ©sidu (Da), sans H2O.
+# Source : ExPASy FindMod, Amino acids â€” Monoisotopic masses.
 # https://proteinsandproteomics.org/content/free/tables_1/table07.pdf
 MONOISOTOPIC_RESIDUE_MASS = {
     "A": 71.03711, "R": 156.10111, "N": 114.04293, "D": 115.02694,
@@ -18,11 +18,11 @@ MONOISOTOPIC_RESIDUE_MASS = {
 }
 MASS = MONOISOTOPIC_RESIDUE_MASS
 
-# pKa des chaînes latérales ionisables.
+# pKa des chaÃ®nes latÃ©rales ionisables.
 # Valeurs conformes au cahier des charges du projet.
-# Référence complémentaire : article comparatif sur les valeurs de pKa.
+# RÃ©fÃ©rence complÃ©mentaire : article comparatif sur les valeurs de pKa.
 # https://pmc.ncbi.nlm.nih.gov/articles/PMC5075173/  (table 4 , ligne wikepidea)
-# Les pKa peuvent varier selon la source et l'environnement moléculaire.
+# Les pKa peuvent varier selon la source et l'environnement molÃ©culaire.
 SIDE_CHAIN_PKA = {
     "C": 8.18,
     "D": 3.9,
@@ -33,13 +33,13 @@ SIDE_CHAIN_PKA = {
     "Y": 10.46,
 }
 
-# pKa des extrémités d'un peptide, selon les valeurs imposées par le projet.
-# Valeurs de référence : N-terminal = 9.69 ; C-terminal = 2.34.
-# Référence : https://www.bachem.com/knowledge-center/peptide-calculator/
+# pKa des extrÃ©mitÃ©s d'un peptide, selon les valeurs imposÃ©es par le projet.
+# Valeurs de rÃ©fÃ©rence : N-terminal = 9.69 ; C-terminal = 2.34.
+# RÃ©fÃ©rence : https://www.bachem.com/knowledge-center/peptide-calculator/
 N_TERMINUS_PKA = 9.69
 C_TERMINUS_PKA = 2.34
 
-# Échelle d'hydrophobicité de Kyte-Doolittle.
+# Ã‰chelle d'hydrophobicitÃ© de Kyte-Doolittle.
 # Kyte J. & Doolittle R. F. (1982), Journal of Molecular Biology,
 # 157, 105-132. DOI: 10.1016/0022-2836(82)90515-0
 # https://resources.qiagenbioinformatics.com/manuals/clcgenomicsworkbench/650/Hydrophobicity_scales.html
@@ -50,7 +50,7 @@ KYTE_DOOLITTLE = {
     "S": -0.8, "T": -0.7, "W": -0.9, "Y": -1.3, "V": 4.2,
 }
 
-# Échelle d'hydrophobicité d'Eisenberg (consensus scale).
+# Ã‰chelle d'hydrophobicitÃ© d'Eisenberg (consensus scale).
 # Eisenberg D., Schwarz E., Komaromy M. & Wall R. (1984),
 # Journal of Molecular Biology, 179, 125-142.
 # https://resources.qiagenbioinformatics.com/manuals/clcgenomicsworkbench/650/Hydrophobicity_scales.html
@@ -59,4 +59,30 @@ EISENBERG = {
     "Q": -0.85, "E": -0.74, "G": 0.48, "H": -0.40, "I": 1.38,
     "L": 1.06, "K": -1.50, "M": 0.64, "F": 1.19, "P": 0.12,
     "S": -0.18, "T": -0.05, "W": 0.81, "Y": 0.26, "V": 1.08,
+}
+
+
+# Indice de Boman : contributions en kcal/mol.
+# Convention : signe inversÃ© par rapport aux Ã©nergies de transfert.
+BOMAN = {
+    "A": -1.81,
+    "R": 14.92,
+    "N": 6.64,
+    "D": 8.72,
+    "C": -1.28,
+    "Q": 5.54,
+    "E": 6.81,
+    "G": -0.94,
+    "H": 4.66,
+    "I": -4.92,
+    "L": -4.92,
+    "K": 5.55,
+    "M": -2.35,
+    "F": -2.98,
+    "P": 0.00,
+    "S": 3.40,
+    "T": 2.57,
+    "W": -2.33,
+    "Y": 0.14,
+    "V": -4.04,
 }
