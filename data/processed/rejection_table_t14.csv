@@ -1,0 +1,4 @@
+source,total_brut,conservees,total_rejetees,manquante,vide,lettres_ambigues,lettres_rares,autres_caracteres,trop_courte,trop_longue
+uniprot,12423,11821,602,0,0,598,4,0,0,0
+amp,3608,1084,2524,0,0,58,1,0,22,2443
+bactibase,786,177,609,0,0,12,0,0,4,593
