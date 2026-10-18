@@ -1,13 +1,13 @@
 """
-RÃ©fÃ©rences physico-chimiques des 20 acides aminÃ©s standards.
+Références physico-chimiques des 20 acides aminés standards.
 """
 
-# Les 20 acides aminÃ©s standards, en code Ã  une lettre.
+# Les 20 acides aminés standards, en code à une lettre.
 AMINO_ACIDS = tuple("ACDEFGHIKLMNPQRSTVWY")
 AA_LIST = AMINO_ACIDS
 
-# Masse monoisotopique du rÃ©sidu (Da), sans H2O.
-# Source : ExPASy FindMod, Amino acids â€” Monoisotopic masses.
+# Masse monoisotopique du résidu (Da), sans H2O.
+# Source : ExPASy FindMod, Amino acids — Monoisotopic masses.
 # https://proteinsandproteomics.org/content/free/tables_1/table07.pdf
 MONOISOTOPIC_RESIDUE_MASS = {
     "A": 71.03711, "R": 156.10111, "N": 114.04293, "D": 115.02694,
@@ -18,11 +18,11 @@ MONOISOTOPIC_RESIDUE_MASS = {
 }
 MASS = MONOISOTOPIC_RESIDUE_MASS
 
-# pKa des chaÃ®nes latÃ©rales ionisables.
+# pKa des chaînes latérales ionisables.
 # Valeurs conformes au cahier des charges du projet.
-# RÃ©fÃ©rence complÃ©mentaire : article comparatif sur les valeurs de pKa.
+# Référence complémentaire : article comparatif sur les valeurs de pKa.
 # https://pmc.ncbi.nlm.nih.gov/articles/PMC5075173/  (table 4 , ligne wikepidea)
-# Les pKa peuvent varier selon la source et l'environnement molÃ©culaire.
+# Les pKa peuvent varier selon la source et l'environnement moléculaire.
 SIDE_CHAIN_PKA = {
     "C": 8.18,
     "D": 3.9,
@@ -33,13 +33,13 @@ SIDE_CHAIN_PKA = {
     "Y": 10.46,
 }
 
-# pKa des extrÃ©mitÃ©s d'un peptide, selon les valeurs imposÃ©es par le projet.
-# Valeurs de rÃ©fÃ©rence : N-terminal = 9.69 ; C-terminal = 2.34.
-# RÃ©fÃ©rence : https://www.bachem.com/knowledge-center/peptide-calculator/
+# pKa des extrémités d'un peptide, selon les valeurs imposées par le projet.
+# Valeurs de référence : N-terminal = 9.69 ; C-terminal = 2.34.
+# Référence : https://www.bachem.com/knowledge-center/peptide-calculator/
 N_TERMINUS_PKA = 9.69
 C_TERMINUS_PKA = 2.34
 
-# Ã‰chelle d'hydrophobicitÃ© de Kyte-Doolittle.
+# Échelle d'hydrophobicité de Kyte-Doolittle.
 # Kyte J. & Doolittle R. F. (1982), Journal of Molecular Biology,
 # 157, 105-132. DOI: 10.1016/0022-2836(82)90515-0
 # https://resources.qiagenbioinformatics.com/manuals/clcgenomicsworkbench/650/Hydrophobicity_scales.html
@@ -50,7 +50,7 @@ KYTE_DOOLITTLE = {
     "S": -0.8, "T": -0.7, "W": -0.9, "Y": -1.3, "V": 4.2,
 }
 
-# Ã‰chelle d'hydrophobicitÃ© d'Eisenberg (consensus scale).
+# Échelle d'hydrophobicité d'Eisenberg (consensus scale).
 # Eisenberg D., Schwarz E., Komaromy M. & Wall R. (1984),
 # Journal of Molecular Biology, 179, 125-142.
 # https://resources.qiagenbioinformatics.com/manuals/clcgenomicsworkbench/650/Hydrophobicity_scales.html
@@ -61,9 +61,22 @@ EISENBERG = {
     "S": -0.18, "T": -0.05, "W": 0.81, "Y": 0.26, "V": 1.08,
 }
 
-
 # Indice de Boman : contributions en kcal/mol.
-# Convention : signe inversÃ© par rapport aux Ã©nergies de transfert.
+#
+# Source de la table :
+#   Boman H. G. (2003), "Antibacterial peptides: basic facts and emerging
+#   concepts", Journal of Internal Medicine, 254(3), 197-215.
+#   Table de référence telle que publiée par le package R « Peptides »
+#   (Osorio D., Rondón-Villarreal P., Torres R., 2015, R Journal 7(1))
+#   et son port Python peptides.py :
+#   https://github.com/althonos/peptides.py/blob/master/peptides/tables/boman/Boman.csv
+#
+# Convention de signe : les valeurs ci-dessous sont l'inverse exacte de la
+# table source (ex. R : 14.92 ici contre -14.92 en source), afin que la
+# moyenne simple effectuée dans peplib.descriptors.calculate_boman_index
+# redonne l'indice standard du package R (vérifié : boman("FLPVLAGLTPSIVPKLVCLLTKKC")
+# = -1.235833, identique à la doc R et à l'entrée Yadamp 845).
+# Résidu P absent de la table source : contribution 0.00 par convention.
 BOMAN = {
     "A": -1.81,
     "R": 14.92,
