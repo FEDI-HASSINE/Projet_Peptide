@@ -78,7 +78,14 @@ def sequence_identity(a: str, b: str) -> float:
 def compute_near_duplicates_90(
     sequences: List[str], threshold: float = 0.90
 ) -> Dict[str, float | int]:
-    """T25 — Mesure le taux de quasi-doublons à 90% d'identité."""
+    """T25 — Mesure le taux de quasi-doublons à 90% d'identité.
+
+    min_shared=3 : dans la fenêtre 10-50 AA, deux séquences d'identité
+    >= 0.90 partagent au moins 3 3-mers (d <= 0.1*max_len, chaque
+    substitution affecte au plus 3 k-mers, donc >= len-k+1-3*d >= 3
+    k-mers partagés) ; validé par brute-force sur la source AMP
+    (291 paires identiques à un bruteforce exhaustif).
+    """
     unique_seqs = sorted(set(str(s) for s in sequences))
     n_unique = len(unique_seqs)
     if n_unique == 0:

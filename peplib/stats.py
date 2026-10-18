@@ -12,11 +12,16 @@ AA_ORDER = list("ACDEFGHIKLMNPQRSTVWY")
 
 
 def compute_composition(sequences: List[str] | pd.Series) -> Dict[str, float]:
-    """T16 — Calcule la composition f(a) = compte(a) / N_total sur les 20 acides aminés."""
+    """T16 — Calcule la composition f(a) = compte(a) / N_total sur les 20 acides aminés.
+
+    Chaque séquence est normalisée en majuscules avant comptage ; les
+    caractères hors alphabet sont ignorés (ils ne contribuent ni au
+    numérateur ni au dénominateur).
+    """
     counts = {aa: 0 for aa in AA_ORDER}
     total = 0
     for seq in sequences:
-        for ch in str(seq):
+        for ch in str(seq).upper():
             if ch in counts:
                 counts[ch] += 1
                 total += 1
@@ -30,9 +35,14 @@ def compute_composition(sequences: List[str] | pd.Series) -> Dict[str, float]:
 
 
 def kl_divergence(p: np.ndarray, q: np.ndarray) -> float:
-    """Calcule KL(p || q) en nats en masquant exactement les entrées où p == 0."""
+    """Calcule KL(p || q) en nats en masquant exactement les entrées où p == 0.
+
+    Retourne inf si q == 0 pour un ou plusieurs indices où p > 0.
+    Accepte des distributions non normalisées (le calcul est alors formel).
+    """
     mask = p > 0
-    return float(np.sum(p[mask] * np.log(p[mask] / q[mask])))
+    with np.errstate(divide="ignore", invalid="ignore"):
+        return float(np.sum(p[mask] * np.log(p[mask] / q[mask])))
 
 
 def jensen_shannon_divergence(
@@ -62,7 +72,7 @@ def compute_js_matrix(
 
 
 def compute_entropy(comp_dict: Dict[str, float]) -> float:
-    """T24 — Entropie de composition H = - sum f(a) log f(a) en nats."""
+    """T17 — Entropie de composition H = - sum f(a) log f(a) en nats."""
     p = np.array([comp_dict[aa] for aa in AA_ORDER], dtype=np.float64)
     mask = p > 0
     return float(-np.sum(p[mask] * np.log(p[mask])))
@@ -78,7 +88,7 @@ def plot_length_histograms(
     if len(dfs) == 1:
         axes = [axes]
     for ax, (source, df) in zip(axes, dfs.items()):
-        lengths = df["sequence"].astype(str).str.len()
+        lengths = df["sequence"].dropna().astype(str).str.len()
         ax.hist(lengths, bins=range(10, 52), edgecolor="black", alpha=0.75)
         ax.set_title(f"Longueurs - {source} (n={len(df)})")
         ax.set_xlabel("Longueur (AA)")

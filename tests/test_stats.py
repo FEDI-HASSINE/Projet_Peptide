@@ -7,6 +7,7 @@ from peplib.stats import (
     compute_entropy,
     compute_js_matrix,
     jensen_shannon_divergence,
+    kl_divergence,
     plot_length_histograms,
 )
 
@@ -42,3 +43,38 @@ def test_js_matrix_and_entropy(tmp_path):
     df_test = pd.DataFrame({"sequence": ["ACDEFGHIKL", "ACDEFGHIKLMN"]})
     out_png = plot_length_histograms({"s1": df_test}, out_path=str(tmp_path / "hist.png"))
     assert (tmp_path / "hist.png").exists()
+
+
+def test_kl_divergence_valeur():
+    import numpy as np
+
+    p = np.array([0.5, 0.5])
+    q = np.array([0.9, 0.1])
+    attendu = 0.5 * math.log(0.5 / 0.9) + 0.5 * math.log(0.5 / 0.1)
+    assert kl_divergence(p, q) == pytest.approx(attendu)
+
+
+def test_kl_divergence_asymetrie():
+    import numpy as np
+
+    p = np.array([0.5, 0.5])
+    q = np.array([0.9, 0.1])
+    assert kl_divergence(p, q) != kl_divergence(q, p)
+    assert kl_divergence(p, p) == 0.0
+
+
+def test_kl_q_zero_donne_inf():
+    import numpy as np
+
+    p = np.array([0.5, 0.5])
+    q = np.array([1.0, 0.0])
+    assert kl_divergence(p, q) == float("inf")
+
+
+def test_entropy_ancre():
+    c = compute_composition(["AAAAAAAAAA"])
+    assert abs(compute_entropy(c)) < 1e-12
+    c2 = compute_composition(["ACDEFGHIKL", "MNPQRSTVWY"])
+    assert compute_entropy(c2) >= 0.0
+    c3 = compute_composition(["A" * 10, "C" * 10])
+    assert compute_entropy(c3) >= 0.0
