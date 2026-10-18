@@ -1,0 +1,3 @@
+Justification du report du clustering complet (union-find) au Mois 2 (T25) :
+1. En Semaine 1, l'objectif est d'auditer la redondance intrinsèque du corpus brut filtré sans altérer les distributions par source.
+2. Le regroupement par composantes connexes (union-find à 90% d'identité) et l'alignement global/local (Needleman-Wunsch / Smith-Waterman avec BLOSUM62) sont requis au Mois 2 pour construire les splits train/val/test (90/5/5) par clusters disjoints et garantir l'absence totale de fuite de données (data leakage) lors de l'entraînement des modèles génératifs.
