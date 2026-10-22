@@ -44,3 +44,13 @@ def test_conservative_cheaper_than_radical():
 def test_matrix_sum_is_known_checksum():
     # somme des 400 valeurs (controle de saisie global, verifiee contre le fichier NCBI)
     assert sum(v for row in BLOSUM62.values() for v in row.values()) == -426
+
+
+@pytest.mark.parametrize("residu", ["X", "B", "Z", "J", "U", "O", "*", "-"])
+def test_ambiguous_residues_rejected(residu):
+    # contrat docstring : toute valeur hors des 20 AA canoniques leve
+    # une ValueError explicite (matrice sans ambigus, rejet T12/T13)
+    with pytest.raises(ValueError):
+        blosum62_score(residu, "A")
+    with pytest.raises(ValueError):
+        blosum62_score("A", residu)

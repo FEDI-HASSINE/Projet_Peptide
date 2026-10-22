@@ -140,5 +140,20 @@ BLOSUM62 = {
 
 
 def blosum62_score(a, b):
-    """Score de substitution BLOSUM62 (entier) entre deux acides amines."""
+    """Score de substitution BLOSUM62 (entier) entre deux acides amines.
+
+    Contrat : `a` et `b` appartiennent aux 20 acides amines canoniques
+    (majuscules A-V). Toute autre valeur (ambigus B/Z/X/J, non-standards
+    U/O, gaps `*` / `-`, minuscules) leve une ValueError explicite :
+    la matrice ne couvre pas les ambigus, qui sont de toute facon rejetes
+    en amont par le filtre d'alphabet (T12/T13).
+    """
+    if a not in BLOSUM62:
+        raise ValueError(
+            f"residu hors alphabet canonique BLOSUM62 (20 AA) : {a!r}"
+        )
+    if b not in BLOSUM62:
+        raise ValueError(
+            f"residu hors alphabet canonique BLOSUM62 (20 AA) : {b!r}"
+        )
     return BLOSUM62[a][b]
