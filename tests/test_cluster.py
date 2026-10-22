@@ -1,13 +1,17 @@
-from peplib.cluster import UnionFind, cluster_sequences
+from peplib.cluster import (
+    UnionFind,
+    cluster_sequences,
+    run_clustering,
+    run_sample_clustering,
+)
 
 import pandas as pd
-from peplib.cluster import run_clustering
+import random
+
 from peplib.dedup import (
     find_candidate_pairs,
     sequence_identity,
 )
-import random
-import pandas as pd
 
 
 def test_union_find_transitivity():
@@ -125,4 +129,63 @@ def test_kmer_coverage_real_sample():
     print(f"Paires similaires : {len(exact_pairs)}")
     print(f"Paires manquées : {len(missed)}")
 
-    assert not missed    
+    assert not missed
+
+
+def test_union_find_path_compression():
+    # chaîne volontairement non compressée : 0 -> 1 -> 2 (racine)
+    uf = UnionFind(5)
+    uf.parent[0] = 1
+    uf.parent[1] = 2
+
+    assert uf.find(0) == 2
+
+    # la compression de chemin doit raccourcir les deux maillons visités
+    assert uf.parent[0] == 2
+    assert uf.parent[1] == 2
+
+
+def test_union_find_union_by_rank():
+    uf = UnionFind(4)
+
+    uf.union(0, 1)
+    uf.union(2, 3)
+
+    root_a = uf.find(0)
+    root_b = uf.find(2)
+
+    # deux arbres de même rang
+    assert uf.rank[root_a] == uf.rank[root_b] == 1
+
+    # union à rangs égaux : un arbre s'attache à l'autre, le rang monte à 2
+    assert uf.union(1, 3) is True
+    assert uf.find(0) == uf.find(2)
+    assert uf.rank[uf.find(0)] == 2
+
+    # déjà même groupe : aucune re-fusion, le rang ne bouge plus
+    assert uf.union(1, 3) is False
+    assert uf.rank[uf.find(0)] == 2
+
+
+def test_sample_clustering_anchor_v01():
+    # Ancre reproductible du PR #12 (T35 début) :
+    # échantillon déterministe (graine 42) du corpus v0.1 versionné.
+    # Résultats verrouillés (relecture indépendante du 22/10/2026) :
+    # candidats 3 326 | éliminées (longueur) 2 584 | comparées 742
+    # | fusions 3 | clusters 197.
+    # Ce test échouera volontairement si le corpus change : s'applique
+    # uniquement à data/processed/corpus_filtered_all.csv (v0.1).
+    clusters, stats = run_sample_clustering(
+        input_path="data/processed/corpus_filtered_all.csv",
+        n=200,
+        seed=42,
+    )
+
+    assert stats["candidats"] == 3326
+    assert stats["eliminees_longueur"] == 2584
+    assert stats["comparees"] == 742
+    # vérifie en même temps l'arithmétique de la description du PR
+    assert stats["comparees"] == stats["candidats"] - stats["eliminees_longueur"]
+    assert stats["fusions"] == 3
+    assert 200 - len(set(clusters)) == stats["fusions"]
+    assert len(set(clusters)) == 197

@@ -1,6 +1,8 @@
 from peplib.dedup import find_candidate_pairs, sequence_identity
 from pathlib import Path
 
+import random
+
 import pandas as pd
 import matplotlib.pyplot as plt
 
@@ -40,8 +42,14 @@ class UnionFind:
 def cluster_sequences(
     sequences: list[str],
     threshold: float = 0.90,
+    stats: dict | None = None,
 ) -> list[int]:
-    """T35 : clustering avec filtrage rapide des longueurs."""
+    """T35 : clustering avec filtrage rapide des longueurs.
+
+    Si `stats` est un dict fourni par l'appelant, il est rempli avec les
+    compteurs finaux : `candidats`, `eliminees_longueur`, `comparees`,
+    `fusions`. Le retour reste inchangé (liste d'identifiants de cluster).
+    """
 
     if not 0 < threshold <= 1:
         raise ValueError("threshold doit être dans ]0, 1]")
@@ -65,8 +73,10 @@ def cluster_sequences(
         a = sequences[i]
         b = sequences[j]
 
-        # Filtre de longueur : aucune paire admissible
-        # ne peut être supprimée par cette condition.
+        # Filtre de longueur, sans perte : l'identité vérifie
+        # id(a,b) = 1 - d/max <= min/max (car d >= | |a|-|b| |),
+        # donc min/max < threshold implique identité < threshold :
+        # toute paire écartée ici ne pouvait atteindre le seuil.
         if min(len(a), len(b)) / max(len(a), len(b)) < threshold:
             filtered_pairs += 1
             continue
@@ -96,6 +106,14 @@ def cluster_sequences(
     print(f"Paires écartées par longueur : {filtered_pairs}")
     print(f"Paires comparées : {compared_pairs}")
     print(f"Fusions : {merged_pairs}")
+
+    if stats is not None:
+        stats.update(
+            candidats=total_candidates,
+            eliminees_longueur=filtered_pairs,
+            comparees=compared_pairs,
+            fusions=merged_pairs,
+        )
 
     return [root_to_cluster[root] for root in roots]
 
@@ -173,3 +191,32 @@ def run_clustering(
     print(f"Figure générée : {figure_path}")
 
     return result
+
+
+def run_sample_clustering(
+    input_path: str = "data/processed/corpus_filtered_all.csv",
+    n: int = 200,
+    seed: int = 42,
+    threshold: float = 0.90,
+) -> tuple[list[int], dict]:
+    """T35 début — run reproductible sur un échantillon semé du corpus.
+
+    Échantillon : séquences uniques TRIÉES du corpus versionné, tirées
+    par `random.Random(seed)`. c'est le point d'entrée à citer dans une
+    description de PR : les chiffres ci-dessous sont les SEULS autorisés
+    et sont verrouillés par un test (ancre v0.1, corpus 13 082 lignes) :
+
+        candidats 3 326 | éliminées par longueur 2 584 | comparées 742
+        fusions 3 | clusters 197
+
+    tout autre chiffre dans une description = non reproductible (rejet).
+    """
+    df = pd.read_csv(input_path)
+
+    sequences = sorted(df["sequence"].dropna().unique().tolist())
+    sample = random.Random(seed).sample(sequences, min(n, len(sequences)))
+
+    stats: dict = {}
+    clusters = cluster_sequences(sample, threshold=threshold, stats=stats)
+
+    return clusters, stats
