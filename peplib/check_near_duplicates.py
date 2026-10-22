@@ -1,18 +1,24 @@
 """
-Verification independante du taux de quasi-doublons a 90 % (T25).
+Vérification indépendante du taux de quasi-doublons à 90 % (T25).
 
 Usage :
     python -m peplib.check_near_duplicates
 
-Recalcule le taux SANS utiliser peplib.dedup, puis le compare a
+Recalcule le taux SANS utiliser peplib.dedup, puis le compare à
 data/processed/near_duplicates_t25.csv.
 
-Methode : index de 3-mers (produit creux), filtre sur : deux sequences
-d'identite >= 0.90 partagent au moins D - 3*d_max 3-mers distincts
+Méthode : index de 3-mers (produit creux), filtre sur : deux séquences
+d'identité >= 0.90 partagent au moins D - 3*d_max 3-mers distincts
 (D = nb de 3-mers distincts de la plus longue, d_max = floor(0.1 * longueur max)),
-puis distance de Levenshtein exacte (bandee) sur les paires retenues.
+puis distance de Levenshtein exacte (bandée) sur les paires retenues.
+
+Justification de l'epsilon : dans dmax = floor((1 - THRESHOLD) * lmax + 1e-9),
+le + 1e-9 protège la frontière exacte 0,90 de l'arrondi flottant — en double,
+(1 - 0.90) * 10 = 0.9999…8, donc sans l'epsilon le cas limite « 1 édition
+dans une longueur 10 » (identité = 0,90 pile) serait exclu à tort.
 """
 import sys
+from pathlib import Path
 
 import numpy as np
 import pandas as pd
@@ -25,7 +31,7 @@ K = 3
 
 
 def levenshtein_within(a, b, dmax):
-    """True si Levenshtein(a, b) <= dmax (programmation dynamique bandee)."""
+    """True si Levenshtein(a, b) <= dmax (programmation dynamique bandée)."""
     if abs(len(a) - len(b)) > dmax:
         return False
     prev = list(range(len(b) + 1))
@@ -64,6 +70,7 @@ def near_duplicate_stats(sequences):
             if len(js) == 0:
                 continue
             lmax = np.maximum(lengths[i], lengths[js])
+            # + 1e-9 : voir la justification de l'epsilon dans le docstring du module.
             dmax = np.floor((1 - THRESHOLD) * lmax + 1e-9).astype(int)
             d_long = np.where(lengths[i] >= lengths[js], distinct[i], distinct[js])
             ok = (np.abs(lengths[i] - lengths[js]) <= dmax) & (shared[r, js] >= d_long - 3 * dmax)
@@ -76,7 +83,19 @@ def near_duplicate_stats(sequences):
             "near_dup_rate": len(members) / n if n else 0.0}
 
 
+def _exiger_fichier(chemin):
+    """Sort avec un message clair si un fichier d'entrée est absent."""
+    if not Path(chemin).is_file():
+        sys.exit(
+            f"fichier manquant : {chemin}\n"
+            "Vérifier data/processed/ (généré par le pipeline T22/T25), puis relancer."
+        )
+    return chemin
+
+
 def main():
+    _exiger_fichier(CORPUS)
+    _exiger_fichier(REFERENCE)
     mine = near_duplicate_stats(pd.read_csv(CORPUS)["sequence"])
     ref = pd.read_csv(REFERENCE).iloc[0].to_dict()
     ok = True
