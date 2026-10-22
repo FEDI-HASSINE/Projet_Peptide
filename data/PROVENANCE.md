@@ -91,3 +91,31 @@ versionnés (fins de ligne LF).
 - **Résidus modifiés :** analyse et règles de traitement prévues dans T34.
 - **Biosécurité :** réappliquer les contrôles existants avant toute utilisation dans le corpus génératif.
   
+
+## Source : AMP Challenge 2027 — antibacterial.fasta
+
+- **Nom de la source :** AMP Challenge 2027
+- **Dépôt :** szczurek-lab/amp-challenge-2027
+- **URL :** https://raw.githubusercontent.com/szczurek-lab/amp-challenge-2027/main/data/antibacterial.fasta
+- **Date de téléchargement :** 22/10/2026
+- **Version :** branche main, identifiée par SHA-256
+- **Format :** FASTA
+- **Nombre de séquences brutes :** 39 448
+- **Fichier :** data/raw/challenge_antibacterial_20261022.fasta
+- **SHA-256 :** cbbeac64ba95746d87961e8ad9dd0849ae8058d15a300b2e7f6990730ca521e9
+- **Téléchargement manuel :** Non (URL directe)
+
+### Licence et redistribution
+
+- Licence annoncée du dépôt : BSD-3-Clause.
+- Le fichier agrège 13 bases amont : dbAMP, DRAMP, DBAASP, CAMP, SATPdb, APD, AMPDB, DADP, InverPep, CancerPPD, BaAMPs, CyBase et ParaPep.
+- Les licences des bases amont restent à vérifier individuellement.
+- **Décision :** GO provisoire pour l'analyse académique locale ; NO-GO provisoire pour la redistribution publique.
+- Le fichier brut reste local et est exclu du suivi Git via `.gitignore`.
+
+### Contrôles et traitement prévu
+
+- Les en-têtes FASTA contiennent des métadonnées : longueur, charge, disulfide, activité et bases d'origine.
+- Filtrage selon les règles de la Semaine 1 : alphabet canonique et longueur 10–50.
+- Nombre attendu après filtrage : 34 474 séquences (à vérifier lors de T34).
+- Contrôle de biosécurité à réappliquer avant utilisation générative.
