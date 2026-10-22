@@ -99,3 +99,61 @@ BOMAN = {
     "Y": 0.14,
     "V": -4.04,
 }
+
+
+# --- BLOSUM62 (T33) ----------------------------------------------------------
+# Source : Henikoff S. & Henikoff J.G. (1992), "Amino acid substitution matrices
+# from protein blocks", PNAS 89(22):10915-10919. Valeurs de la matrice BLOSUM62
+# publiee par le NCBI (ftp.ncbi.nih.gov/blast/matrices/BLOSUM62), unite : 1/2 bit.
+# Les 20 acides amines canoniques uniquement (B, Z, X, * non utilises ici).
+# Saisie dans l'ordre du fichier source A R N D C Q E G H I L K M F P S T W Y V
+# pour pouvoir relire ligne a ligne ; convertie ensuite en dict de dict.
+_BLOSUM62_ORDER = "ARNDCQEGHILKMFPSTWYV"
+_BLOSUM62_ROWS = (
+    #  A   R   N   D   C   Q   E   G   H   I   L   K   M   F   P   S   T   W   Y   V
+    ( 4, -1, -2, -2,  0, -1, -1,  0, -2, -1, -1, -1, -1, -2, -1,  1,  0, -3, -2,  0),  # A
+    (-1,  5,  0, -2, -3,  1,  0, -2,  0, -3, -2,  2, -1, -3, -2, -1, -1, -3, -2, -3),  # R
+    (-2,  0,  6,  1, -3,  0,  0,  0,  1, -3, -3,  0, -2, -3, -2,  1,  0, -4, -2, -3),  # N
+    (-2, -2,  1,  6, -3,  0,  2, -1, -1, -3, -4, -1, -3, -3, -1,  0, -1, -4, -3, -3),  # D
+    ( 0, -3, -3, -3,  9, -3, -4, -3, -3, -1, -1, -3, -1, -2, -3, -1, -1, -2, -2, -1),  # C
+    (-1,  1,  0,  0, -3,  5,  2, -2,  0, -3, -2,  1,  0, -3, -1,  0, -1, -2, -1, -2),  # Q
+    (-1,  0,  0,  2, -4,  2,  5, -2,  0, -3, -3,  1, -2, -3, -1,  0, -1, -3, -2, -2),  # E
+    ( 0, -2,  0, -1, -3, -2, -2,  6, -2, -4, -4, -2, -3, -3, -2,  0, -2, -2, -3, -3),  # G
+    (-2,  0,  1, -1, -3,  0,  0, -2,  8, -3, -3, -1, -2, -1, -2, -1, -2, -2,  2, -3),  # H
+    (-1, -3, -3, -3, -1, -3, -3, -4, -3,  4,  2, -3,  1,  0, -3, -2, -1, -3, -1,  3),  # I
+    (-1, -2, -3, -4, -1, -2, -3, -4, -3,  2,  4, -2,  2,  0, -3, -2, -1, -2, -1,  1),  # L
+    (-1,  2,  0, -1, -3,  1,  1, -2, -1, -3, -2,  5, -1, -3, -1,  0, -1, -3, -2, -2),  # K
+    (-1, -1, -2, -3, -1,  0, -2, -3, -2,  1,  2, -1,  5,  0, -2, -1, -1, -1, -1,  1),  # M
+    (-2, -3, -3, -3, -2, -3, -3, -3, -1,  0,  0, -3,  0,  6, -4, -2, -2,  1,  3, -1),  # F
+    (-1, -2, -2, -1, -3, -1, -1, -2, -2, -3, -3, -1, -2, -4,  7, -1, -1, -4, -3, -2),  # P
+    ( 1, -1,  1,  0, -1,  0,  0,  0, -1, -2, -2,  0, -1, -2, -1,  4,  1, -3, -2, -2),  # S
+    ( 0, -1,  0, -1, -1, -1, -1, -2, -2, -1, -1, -1, -1, -2, -1,  1,  5, -2, -2,  0),  # T
+    (-3, -3, -4, -4, -2, -2, -3, -2, -2, -3, -2, -3, -1,  1, -4, -3, -2, 11,  2, -3),  # W
+    (-2, -2, -2, -3, -2, -1, -2, -3,  2, -1, -1, -2, -1,  3, -3, -2, -2,  2,  7, -1),  # Y
+    ( 0, -3, -3, -3, -1, -2, -2, -3, -3,  3,  1, -2,  1, -1, -2, -2,  0, -3, -1,  4),  # V
+)
+
+BLOSUM62 = {
+    a: {b: _BLOSUM62_ROWS[i][j] for j, b in enumerate(_BLOSUM62_ORDER)}
+    for i, a in enumerate(_BLOSUM62_ORDER)
+}
+
+
+def blosum62_score(a, b):
+    """Score de substitution BLOSUM62 (entier) entre deux acides amines.
+
+    Contrat : `a` et `b` appartiennent aux 20 acides amines canoniques
+    (majuscules A-V). Toute autre valeur (ambigus B/Z/X/J, non-standards
+    U/O, gaps `*` / `-`, minuscules) leve une ValueError explicite :
+    la matrice ne couvre pas les ambigus, qui sont de toute facon rejetes
+    en amont par le filtre d'alphabet (T12/T13).
+    """
+    if a not in BLOSUM62:
+        raise ValueError(
+            f"residu hors alphabet canonique BLOSUM62 (20 AA) : {a!r}"
+        )
+    if b not in BLOSUM62:
+        raise ValueError(
+            f"residu hors alphabet canonique BLOSUM62 (20 AA) : {b!r}"
+        )
+    return BLOSUM62[a][b]
