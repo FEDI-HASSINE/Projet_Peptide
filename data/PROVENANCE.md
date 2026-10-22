@@ -71,3 +71,23 @@ qui rendait les SHA-256 ci-dessus invérifiables sur un poste Windows. Le fichie
 `data/processed/*.json` : les empreintes sont désormais identiques sur tous les
 systèmes. Les valeurs ci-dessus sont celles des fichiers tels qu'ils sont
 versionnés (fins de ligne LF).
+
+## Source APD6 — Natural Antimicrobial Peptides (2024)
+
+- **Nom de la source :** Antimicrobial Peptide Database (APD6), University of Nebraska Medical Center.
+- **URL de téléchargement :** https://aps.unmc.edu/assets/sequences/naturalAMPs_APD2024a.fasta
+- **Page des conditions :** https://aps.unmc.edu/downloads
+- **Date de téléchargement :** 22/10/2026
+- **Version du jeu de données :** APD 2024a (hébergé sur le site APD6).
+- **Format brut :** FASTA.
+- **Nombre d'entrées annoncé :** 3306 (comptage local à vérifier).
+- **Nom du fichier :** naturalAMPs_APD2024a.fasta
+- **Chemin local :** data/raw/naturalAMPs_APD2024a.fasta
+- **SHA-256 :** B2D30BBBE57A383220D5FA68FDA5A73728D2345F88585A78AA5F9E9546CD3D66
+- **Téléchargement manuel :** Oui.
+- **Conditions d'usage :** utilisation pour la recherche et l'enseignement avec citation de la source, selon les indications du site APD.
+- **Décision :** GO pour l'utilisation académique locale ; redistribution publique non autorisée explicitement, donc suspendue en attendant clarification.
+- **Gestion Git :** fichier brut exclu via .gitignore ; ne pas publier le corpus dérivé contenant APD sans clarification des droits.
+- **Résidus modifiés :** analyse et règles de traitement prévues dans T34.
+- **Biosécurité :** réappliquer les contrôles existants avant toute utilisation dans le corpus génératif.
+  

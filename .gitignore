@@ -8,3 +8,5 @@ venv/
 .DS_Store
 data/raw/*.zip
 AGENTS.md
+# APD6 - redistribution non autorisée explicitement
+/data/raw/naturalAMPs_APD2024a.fasta
