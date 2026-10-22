@@ -214,7 +214,12 @@ def run_sample_clustering(
     df = pd.read_csv(input_path)
 
     sequences = sorted(df["sequence"].dropna().unique().tolist())
-    sample = random.Random(seed).sample(sequences, min(n, len(sequences)))
+
+    # PRNG semé (S2245) — usage NON sécuritaire : aucune donnée
+    # sensible ; la graine (42 par défaut) sert uniquement à la
+    # reproductibilité de l'ancrage (règle projet : graine 42, AGENTS.md).
+    # Un Mersenne-Twister semé est ici requis et inoffensif.
+    sample = random.Random(seed).sample(sequences, min(n, len(sequences)))  # NOSONAR
 
     stats: dict = {}
     clusters = cluster_sequences(sample, threshold=threshold, stats=stats)
