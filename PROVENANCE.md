@@ -207,3 +207,16 @@ mesurable (T38, recouvrement trilatéral).
 - **Partage du corpus v0.2** : ne distribuer qu'après recalcul des empreintes
   et vérification de chaque licence amont ; ce document est mis à jour
   **avant** le partage.
+
+## T34 - Normalisation APD et AMP Challenge
+
+- APD : naturalAMPs_APD2024a.fasta (site APD6).
+- AMP Challenge : challenge_antibacterial_20261022.fasta.
+- Format : FASTA, lecture sans modification des fichiers bruts.
+- Filtrage : longueur 10 a 50 et alphabet des 20 acides amines canoniques.
+- Residus X/B/Z/J, U/O et autres caracteres non canoniques rejetes sans conversion arbitraire.
+- Les modifications chimiques ne sont pas deduites des sequences FASTA.
+- APD : 3306 sequences brutes, 2796 conservees.
+- AMP Challenge : 39448 sequences brutes, 34474 conservees.
+- Fichiers bruts exclus de Git.
+
