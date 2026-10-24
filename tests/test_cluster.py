@@ -1,15 +1,19 @@
+import random
+from pathlib import Path
+
+import pandas as pd
+
 from peplib.cluster import (
     UnionFind,
     cluster_sequences,
+    levenshtein_bounded,
+    max_distance,
     run_clustering,
     run_sample_clustering,
 )
-
-import pandas as pd
-import random
-
 from peplib.dedup import (
     find_candidate_pairs,
+    levenshtein_distance,
     sequence_identity,
 )
 
@@ -67,13 +71,19 @@ def test_clustering_export(tmp_path):
         figure_path=figure_file,
     )
 
-    assert len(result) == 4
+    assert len(result) == 3
     assert output_file.exists()
     assert figure_file.exists()
 
+    assert list(result.columns) == [
+        "sequence",
+        "sequence_id",
+        "cluster_id",
+        "source",
+    ]
+    assert result["sequence"].is_unique
     assert result.loc[0, "cluster_id"] == result.loc[1, "cluster_id"]
-    assert result.loc[0, "cluster_id"] == result.loc[2, "cluster_id"]
-    assert result.loc[3, "cluster_id"] != result.loc[0, "cluster_id"] 
+    assert result.loc[2, "cluster_id"] != result.loc[0, "cluster_id"]
     
 def test_kmer_candidate_coverage():
     sequences = [
@@ -189,3 +199,78 @@ def test_sample_clustering_anchor_v01():
     assert stats["fusions"] == 3
     assert 200 - len(set(clusters)) == stats["fusions"]
     assert len(set(clusters)) == 197
+
+
+def test_levenshtein_bounded():
+    sequences = [
+        "",
+        "A",
+        "AAAA",
+        "AAAC",
+        "ACDEFGHIKL",
+        "GGGGGGGGGG",
+    ]
+
+    for a in sequences:
+        for b in sequences:
+            for limit in range(6):
+                expected = min(
+                    levenshtein_distance(a, b),
+                    limit + 1,
+                )
+
+                assert levenshtein_bounded(a, b, limit) == expected
+
+
+def test_max_distance_seuil_exact():
+    for length in range(10, 51):
+        assert max_distance(0.90, length) == length // 10
+
+
+def test_seuil_identite_exactement_90():
+    rng = random.Random(42)
+
+    for length in range(10, 51):
+        d = length // 10
+        a = "".join(
+            rng.choice("ACDEFGHIKLMNPQRSTVWY") for _ in range(length)
+        )
+        b = list(a)
+        for pos in rng.sample(range(length), d):
+            b[pos] = "A" if b[pos] != "A" else "C"
+        b = "".join(b)
+
+        clusters = cluster_sequences([a, b])
+        assert clusters[0] == clusters[1], (length, a, b)
+
+
+def test_artifact_clusters_v01():
+    artifact = pd.read_csv(
+        "data/processed/clusters_v01_90.csv",
+        dtype=str,
+    )
+    corpus = pd.read_csv(
+        "data/processed/corpus_filtered_all.csv",
+        dtype=str,
+    )
+
+    assert list(artifact.columns) == [
+        "sequence",
+        "sequence_id",
+        "cluster_id",
+        "source",
+    ]
+    assert not artifact.isna().any().any()
+    assert artifact["sequence"].is_unique
+    assert len(artifact) == 9021
+    assert artifact["cluster_id"].nunique() == 6855
+
+    sizes = artifact.groupby("cluster_id").size()
+    assert sizes.max() == 62
+    assert sizes.median() == 1
+
+    assert set(artifact["sequence"]) == set(corpus["sequence"].unique())
+
+    raw = Path("data/processed/clusters_v01_90.csv").read_bytes()
+    assert b"\r\n" not in raw
+    assert raw.endswith(b"\n")

@@ -285,3 +285,33 @@ mesurable (T38, recouvrement trilatéral).
   Invariants « conservées + rejetées = brutes » vérifiés pour les deux.
 - Fichiers bruts exclus de Git (`.gitignore`).
 
+## T35 — Clusters à 90 % d'identité (corpus v0.1)
+
+- **Artefact** : `data/processed/clusters_v01_90.csv`
+- **Commande** : `python -m peplib.cluster`
+- **Entrée** : `data/processed/corpus_filtered_all.csv` (v0.1, 13 082 lignes,
+  9 021 séquences uniques).
+- **Contenu** : une ligne par séquence unique ; colonnes
+  `sequence, sequence_id, cluster_id, source` (`sequence_id` et `source` =
+  première occurrence dans le corpus). L'artefact est autosuffisant : aucune
+  jointure et aucun ordre de lignes ne sont nécessaires.
+- **Définition** : composantes connexes du graphe « identité ≥ 90 % »
+  (Union-Find avec compression de chemin et union par rang) ; paires
+  candidates issues de l'index inversé de 3-mers, puis distance de
+  Levenshtein bornée. Le seuil est calculé exactement (`Fraction`), sans
+  epsilon flottant.
+- **Comptes** : 9 021 séquences → 6 855 clusters (2 166 fusions), plus grande
+  famille 62, médiane 1 ; 6 422 239 paires candidates = 4 751 008 écartées par
+  longueur + 1 671 231 comparées.
+- **Chaînage** : un cluster est une composante connexe et peut donc contenir
+  deux séquences d'identité inférieure à 90 %. Mesure sur v0.1 : 229 des 822
+  clusters multi-membres (27,9 %) contiennent une paire sous 90 %, 12 (1,5 %)
+  sous 70 %, minimum 45,5 % (cluster 1892). **T39 traite le cluster comme
+  l'unité indivisible du split.**
+- **Portée** : clusters calculés sur le corpus v0.1 uniquement. Le corpus v0.2
+  (42 575 séquences uniques) en contient 33 554 (78,8 %) absentes :
+  **recalculer les clusters sur v0.2 après T37 avant tout split**.
+- **Empreinte SHA-256** : `6af381c2ac9e9ee2e4a9ccafb991009c4732ca6f6f4e455b35805993fed34037` (fichier LF, sans BOM ;
+  `data/processed/*.csv` marqué `-text` dans `.gitattributes`).
+- **Figure** : `results/cluster_sizes_v01.png`.
+
