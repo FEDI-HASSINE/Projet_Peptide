@@ -2,7 +2,7 @@ from peplib.dedup import find_candidate_pairs, sequence_identity
 from pathlib import Path
 
 import random
-
+import math
 import pandas as pd
 import matplotlib.pyplot as plt
 
@@ -39,17 +39,71 @@ class UnionFind:
         return True
 
 
+def levenshtein_bounded(a: str, b: str, max_dist: int) -> int:
+    """
+    Distance de Levenshtein bornée.
+
+    Retourne la distance exacte si elle est <= max_dist.
+    Sinon retourne max_dist + 1.
+    """
+
+    if max_dist < 0:
+        raise ValueError("max_dist doit être positif ou nul")
+
+    n, m = len(a), len(b)
+    inf = max_dist + 1
+
+    # Cas des chaînes vides
+    if n == 0:
+        return min(m, inf)
+
+    if m == 0:
+        return min(n, inf)
+
+    # Différence de longueur trop importante
+    if abs(n - m) > max_dist:
+        return inf
+
+    if a == b:
+        return 0
+
+    prev = [
+        j if j <= max_dist else inf
+        for j in range(m + 1)
+    ]
+
+    for i in range(1, n + 1):
+        curr = [inf] * (m + 1)
+
+        if i <= max_dist:
+            curr[0] = i
+
+        start = max(1, i - max_dist)
+        end = min(m, i + max_dist)
+
+        for j in range(start, end + 1):
+            cost = 0 if a[i - 1] == b[j - 1] else 1
+
+            curr[j] = min(
+                prev[j] + 1,          # Suppression
+                curr[j - 1] + 1,      # Insertion
+                prev[j - 1] + cost,   # Substitution
+            )
+
+        # Arrêt anticipé si aucune solution admissible
+        if min(curr[start:end + 1], default=inf) > max_dist:
+            return inf
+
+        prev = curr
+
+    return min(prev[m], inf)
+
 def cluster_sequences(
     sequences: list[str],
     threshold: float = 0.90,
     stats: dict | None = None,
 ) -> list[int]:
-    """T35 : clustering avec filtrage rapide des longueurs.
-
-    Si `stats` est un dict fourni par l'appelant, il est rempli avec les
-    compteurs finaux : `candidats`, `eliminees_longueur`, `comparees`,
-    `fusions`. Le retour reste inchangé (liste d'identifiants de cluster).
-    """
+    """T35 : clustering à 90 % avec Union-Find."""
 
     if not 0 < threshold <= 1:
         raise ValueError("threshold doit être dans ]0, 1]")
@@ -73,22 +127,27 @@ def cluster_sequences(
         a = sequences[i]
         b = sequences[j]
 
-        # Filtre de longueur, sans perte : l'identité vérifie
-        # id(a,b) = 1 - d/max <= min/max (car d >= | |a|-|b| |),
-        # donc min/max < threshold implique identité < threshold :
-        # toute paire écartée ici ne pouvait atteindre le seuil.
+        # Éliminer les paires incapables d'atteindre le seuil.
         if min(len(a), len(b)) / max(len(a), len(b)) < threshold:
             filtered_pairs += 1
             continue
 
         compared_pairs += 1
 
-        identity = sequence_identity(a, b)
+        # Distance maximale autorisée.
+        max_dist = math.floor(
+            (1.0 - threshold) * max(len(a), len(b)) + 1e-9
+        )
 
-        if identity >= threshold:
+        # Calcul optimisé de Levenshtein.
+        distance = levenshtein_bounded(a, b, max_dist)
+
+        # Fusionner les familles si identité >= 90 %.
+        if distance <= max_dist:
             if uf.union(i, j):
                 merged_pairs += 1
 
+        # Afficher la progression.
         if compared_pairs % 10000 == 0:
             print(
                 f"Comparaisons : {compared_pairs} | "
@@ -96,8 +155,10 @@ def cluster_sequences(
                 flush=True,
             )
 
+    # Représentant de chaque séquence.
     roots = [uf.find(i) for i in range(len(sequences))]
 
+    # Attribuer des numéros de clusters.
     root_to_cluster = {
         root: idx
         for idx, root in enumerate(sorted(set(roots)))

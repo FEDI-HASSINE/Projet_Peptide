@@ -7,6 +7,9 @@ from peplib.cluster import (
 
 import pandas as pd
 import random
+from peplib.cluster import levenshtein_bounded
+from peplib.dedup import levenshtein_distance
+
 
 from peplib.dedup import (
     find_candidate_pairs,
@@ -189,3 +192,24 @@ def test_sample_clustering_anchor_v01():
     assert stats["fusions"] == 3
     assert 200 - len(set(clusters)) == stats["fusions"]
     assert len(set(clusters)) == 197
+
+
+def test_levenshtein_bounded():
+    sequences = [
+        "",
+        "A",
+        "AAAA",
+        "AAAC",
+        "ACDEFGHIKL",
+        "GGGGGGGGGG",
+    ]
+
+    for a in sequences:
+        for b in sequences:
+            for limit in range(6):
+                expected = min(
+                    levenshtein_distance(a, b),
+                    limit + 1,
+                )
+
+                assert levenshtein_bounded(a, b, limit) == expected
