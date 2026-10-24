@@ -192,6 +192,42 @@ mesurable (T38, recouvrement trilatéral).
 
 ---
 
+## Corpus v0.2 — data/processed/corpus_v0.2.csv (Semaine 2, T37)
+
+- **Version** : v0.2
+- **Date de génération** : 24/10/2026
+- **Commande** : `python -m peplib.build_corpus_v02`
+- **Entrées** : les cinq CSV de `data/processed/` (`uniprot.csv`, `amp.csv`,
+  `bactibase.csv`, `amp_apd3.csv`, `challenge.csv`), eux-mêmes régénérables
+  depuis `data/raw/` par les connecteurs T7/T8/T9/T34.
+- **Atomes de source (T37)** : `UniProt`, `APD3`, `AMPChallenge`. Les trois
+  fichiers `uniprot.csv`, `amp.csv` et `bactibase.csv` sont trois requêtes
+  UniProtKB (cf. sources 1 à 3) : ils alimentent l'atome `UniProt` et ne sont
+  pas comptés comme des sources indépendantes.
+- **Comptes** : 50 352 entrées, 42 575 séquences uniques, 7 777 occurrences
+  redondantes (15,45 %), dont 2 984 doublons internes à un fichier d'entrée et
+  4 793 doublons inter-sources. 3 244 séquences sont présentes dans au moins
+  deux atomes (2 772 dans deux, 472 dans les trois). La somme des
+  `n_occurrences` vaut 50 352.
+- **Recouvrement (T38)** : `data/processed/overlap_t38.csv` (trois paires) et
+  `data/processed/overlap_t38_triple.csv` (triple recouvrement, 472 séquences,
+  Jaccard 0,011086) ; figure `results/overlap_t38.png`. Les quasi-doublons
+  relèvent de T42 et ne sont pas traités ici.
+- **Métadonnées disponibles par source** :
+  - UniProt (`uniprot.csv`, `amp.csv`, `bactibase.csv`) : `sequence`, `id` (accession) ;
+  - APD3 (`amp_apd3.csv`) : `sequence`, `id` (APD) ; la cible et l'activité
+    APD3 ne sont pas extraites par le connecteur T34 — perte héritée, non
+    restituable par le corpus, à corriger dans le connecteur ;
+  - AMPChallenge (`challenge.csv`) : `charge`, `disulfide`, `activity`,
+    `dbs_amont` conservées ; `longueur` est recalculée pour toutes les lignes.
+- **Empreinte SHA-256** : `f12f00b21f54e339896ad983193bc2685b9e49d0231d914eb08c62c6c2e6614e`
+- **Restriction de diffusion** : ce fichier contient des séquences APD6
+  (redistribution publique suspendue) et AMP Challenge (NO-GO provisoire).
+  Il reste **réservé au dépôt privé** : ne pas publier, ne pas joindre à une
+  prépublication ni à un dépôt public sans vérification des licences amont.
+
+---
+
 ## Licence, biosécurité et partage (synthèse)
 
 - **UniProt (3 fichiers)** : CC BY 4.0 ; vérifier les conditions de

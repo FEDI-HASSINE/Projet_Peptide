@@ -1,82 +1,152 @@
+"""T37 : fusion et deduplication exacte du corpus v0.2.
 
-"""T37 : fusion et déduplication exacte du corpus v0.2."""
+Trois atomes de source, conformement a la specification de la semaine 2 :
+UniProt, APD3 et AMPChallenge. Les fichiers `uniprot.csv`, `amp.csv` et
+`bactibase.csv` sont trois requetes UniProtKB (cf. PROVENANCE.md) : ils
+alimentent tous les trois l'atome `UniProt` et ne comptent donc pas comme
+des sources independantes.
+
+Regles :
+- une sequence = une ligne ;
+- colonne `sources` = atomes presents, separes par `+`, tries ;
+- colonne `ids` = identifiants disponibles, separes par `|`, tries ;
+- colonne `longueur` = longueur de la sequence, pour toutes les lignes ;
+- metadonnees Challenge conservees telles quelles (charge, disulfide,
+  activity, dbs_amont) ;
+- validation : sequence non vide, alphabet canonique, longueur 10-50.
+  Toute entree hors de ces bornes leve une `ValueError` : le corpus ne
+  peut pas contenir une sequence invalide par accident des entrees.
+"""
 
 from pathlib import Path
+
 import pandas as pd
 
 from peplib.dedup import exact_dedup_stats
 
-
+#: Fichier d'entree -> atome de source (specification T37).
 SOURCES = {
-    "uniprot": "uniprot.csv",
-    "amp": "amp.csv",
-    "bactibase": "bactibase.csv",
-    "apd3": "amp_apd3.csv",
-    "challenge": "challenge.csv",
+    "uniprot.csv": "UniProt",
+    "amp.csv": "UniProt",
+    "bactibase.csv": "UniProt",
+    "amp_apd3.csv": "APD3",
+    "challenge.csv": "AMPChallenge",
 }
+
+#: Atomes de source, dans l'ordre d'affichage.
+ATOMES = ("UniProt", "APD3", "AMPChallenge")
+
+ALPHABET = r"[ACDEFGHIKLMNPQRSTVWY]+"
+LONGUEUR_MIN = 10
+LONGUEUR_MAX = 50
+
+METADONNEES = ("charge", "disulfide", "activity", "dbs_amont")
+
+
+def _normaliser(df, filename):
+    """Valide et normalise les sequences d'un fichier d'entree."""
+    manquantes = {"sequence", "id"} - set(df.columns)
+    if manquantes:
+        raise ValueError(
+            f"Colonnes manquantes dans {filename} : {sorted(manquantes)}"
+        )
+
+    sequences = df["sequence"].fillna("").str.strip().str.upper()
+
+    vides = sequences == ""
+    if vides.any():
+        raise ValueError(
+            f"{filename} : {int(vides.sum())} sequence(s) vide(s)"
+        )
+
+    hors_alphabet = ~sequences.str.fullmatch(ALPHABET)
+    if hors_alphabet.any():
+        exemple = sequences[hors_alphabet].iloc[0]
+        raise ValueError(
+            f"{filename} : {int(hors_alphabet.sum())} sequence(s) hors "
+            f"alphabet canonique (ex. {exemple!r})"
+        )
+
+    longueurs = sequences.str.len()
+    hors_fenetre = (longueurs < LONGUEUR_MIN) | (longueurs > LONGUEUR_MAX)
+    if hors_fenetre.any():
+        exemple = sequences[hors_fenetre].iloc[0]
+        raise ValueError(
+            f"{filename} : {int(hors_fenetre.sum())} sequence(s) hors "
+            f"fenetre {LONGUEUR_MIN}-{LONGUEUR_MAX} (ex. longueur "
+            f"{len(exemple)})"
+        )
+
+    df = df.copy()
+    df["sequence"] = sequences
+    return df
+
+
+def _joindre(merged, colonne, separateur):
+    """Valeurs distinctes triees par sequence, jointes par `separateur`."""
+    from itertools import groupby
+
+    sous = merged[["sequence", colonne]].dropna()
+    sous = sous[sous[colonne].astype(str) != ""]
+    sous = sous.drop_duplicates().sort_values(["sequence", colonne])
+
+    valeurs = {}
+    for sequence, groupe in groupby(
+        zip(sous["sequence"], sous[colonne]), key=lambda paire: paire[0]
+    ):
+        valeurs[sequence] = separateur.join(valeur for _, valeur in groupe)
+    return valeurs
 
 
 def build_corpus(processed_dir="data/processed"):
+    """Fusionne les cinq fichiers d'entree en un corpus deduplique."""
     processed_dir = Path(processed_dir)
     frames = []
 
-    for name, filename in SOURCES.items():
-        path = processed_dir / filename
-        df = pd.read_csv(path, dtype=str)
-
-        required = {"sequence", "source", "id"}
-        if not required.issubset(df.columns):
-            raise ValueError(f"Colonnes manquantes dans {filename}")
-
-        if df["sequence"].isna().any():
-            raise ValueError(f"Séquences manquantes : {filename}")
-
-        df["sequence"] = df["sequence"].str.strip().str.upper()
-        df["source"] = df["source"].fillna(name)
+    for filename, atome in SOURCES.items():
+        df = pd.read_csv(processed_dir / filename, dtype=str)
+        df = _normaliser(df, filename)
+        df["atome"] = atome
         df["id"] = df["id"].fillna("")
-
         frames.append(df)
 
     merged = pd.concat(frames, ignore_index=True)
     stats = exact_dedup_stats(merged["sequence"])
 
-    # Chaque séquence est conservée une seule fois.
-    # Les sources et identifiants sont regroupés.
-    rows = []
+    tailles = merged.groupby("sequence", sort=True).size()
+    atomes = merged.groupby("sequence", sort=True)["atome"].nunique()
+    index = tailles.index
 
-    for sequence, group in merged.groupby("sequence", sort=True):
-        row = {
-            "sequence": sequence,
-            "sources": "|".join(sorted(set(group["source"]))),
-            "ids": "|".join(sorted(set(
-                str(x) for x in group["id"] if x
-            ))),
-            "n_occurrences": len(group),
-            "n_sources": group["source"].nunique(),
-        }
+    corpus = pd.DataFrame(index=index)
+    corpus["sources"] = index.map(_joindre(merged, "atome", "+"))
+    corpus["ids"] = index.map(_joindre(merged, "id", "|"))
+    corpus["n_occurrences"] = tailles
+    corpus["n_sources"] = atomes
+    corpus["longueur"] = index.str.len()
 
-        # Conserver les métadonnées disponibles de Challenge.
-        for column in ("len", "charge", "disulfide", "activity", "dbs_amont"):
-            if column in group.columns:
-                values = group[column].dropna().astype(str).unique()
-                row[column] = "|".join(sorted(values)) if len(values) else ""
+    for colonne in METADONNEES:
+        if colonne in merged.columns:
+            corpus[colonne] = index.map(_joindre(merged, colonne, "|")).fillna("")
 
-        rows.append(row)
+    corpus = corpus.reset_index()
 
-    corpus = pd.DataFrame(rows)
-    output = processed_dir / "corpus_v0.2.csv"
-    corpus.to_csv(output, index=False)
+    ordre = ["sequence", "sources", "ids", "n_occurrences", "n_sources",
+             "longueur"] + [c for c in METADONNEES if c in corpus.columns]
+    corpus = corpus[ordre]
 
     if len(corpus) != stats["unique"]:
-        raise ValueError("Incohérence du nombre de séquences uniques")
+        raise ValueError("Incoherence du nombre de sequences uniques")
+    if not corpus["sequence"].is_unique:
+        raise ValueError("Sequences dupliquees dans le corpus")
 
+    corpus.to_csv(processed_dir / "corpus_v0.2.csv", index=False)
     return corpus, stats
 
 
 if __name__ == "__main__":
     corpus, stats = build_corpus()
-    print("Entrées brutes :", stats["total"])
-    print("Séquences uniques :", stats["unique"])
-    print("Doublons supprimés :", stats["duplicates"])
+    print("Entrees brutes :", stats["total"])
+    print("Sequences uniques :", stats["unique"])
+    print("Doublons supprimes :", stats["duplicates"])
     print("Taux de redondance :", round(stats["redundancy_rate"] * 100, 2), "%")
-    print("Fichier écrit : data/processed/corpus_v0.2.csv")
+    print("Fichier ecrit : data/processed/corpus_v0.2.csv")
