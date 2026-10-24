@@ -220,7 +220,9 @@ mesurable (T38, recouvrement trilatéral).
     restituable par le corpus, à corriger dans le connecteur ;
   - AMPChallenge (`challenge.csv`) : `charge`, `disulfide`, `activity`,
     `dbs_amont` conservées ; `longueur` est recalculée pour toutes les lignes.
-- **Empreinte SHA-256** : `f12f00b21f54e339896ad983193bc2685b9e49d0231d914eb08c62c6c2e6614e`
+- **Empreinte SHA-256** : `f01e248c93179b70773b1775991619f3c4cb0c0975420ba23bdddacc71ae88da`
+  (fichier en LF, sans BOM ; `data/processed/*.csv` est marqué `-text` dans
+  `.gitattributes` pour que l'empreinte soit identique sur tout système)
 - **Restriction de diffusion** : ce fichier contient des séquences APD6
   (redistribution publique suspendue) et AMP Challenge (NO-GO provisoire).
   Il reste **réservé au dépôt privé** : ne pas publier, ne pas joindre à une

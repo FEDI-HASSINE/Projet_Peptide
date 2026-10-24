@@ -3,3 +3,4 @@
 # revérifiées à l'identique sur tout système (Windows compris).
 data/raw/*.tsv -text
 data/processed/*.json -text
+data/processed/*.csv -text
