@@ -1,17 +1,43 @@
+"""Connecteur T34 pour le fichier AMP Challenge.
 
-"""Connecteur T34 pour AMP Challenge 2027."""
+Ce module ne télécharge rien : il lit un FASTA déjà présent dans
+``data/raw/`` (immuable) et écrit la vue filtrée dans ``data/processed/``.
+
+Les en-têtes du Challenge portent les métadonnées
+(``len=``, ``charge=``, ``disulfide=``, ``activity=``, ``dbs=``). Le champ
+``dbs=`` est conservé en colonne ``dbs_amont`` : c'est une information de
+provenance multi-bases (13 bases possibles), il ne pilote ni filtre ni
+split. Tout jeton d'en-tête qui n'est pas au format ``clé=valeur`` est
+ignoré, et une clé absente produit une valeur ``NaN`` (aucune valeur
+inventée).
+
+Usage :
+    python -m peplib.download_challenge
+"""
 
 from pathlib import Path
-import re
 
 import pandas as pd
 
 from peplib.filters import filter_dataframe
 
 
+SOURCE = "AMPChallenge"
+DEFAULT_RAW = Path("data/raw/challenge_antibacterial_20261022.fasta")
+DEFAULT_OUT = Path("data/processed/challenge.csv")
+COLUMNS = [
+    "sequence", "source", "id", "len", "charge",
+    "disulfide", "activity", "dbs_amont",
+]
+
 
 def parse_header(header: str) -> dict:
-    """Extrait les métadonnées d'un en-tête AMP Challenge."""
+    """Extrait les métadonnées d'un en-tête AMP Challenge.
+
+    Le premier jeton est l'identifiant ; les suivants sont lus au format
+    ``clé=valeur``. Un jeton sans ``=`` est ignoré. Un en-tête vide lève
+    une ``ValueError``.
+    """
     header = header.removeprefix(">").strip()
 
     parts = header.split()
@@ -28,9 +54,13 @@ def parse_header(header: str) -> dict:
     return metadata
 
 
-
 def load_challenge(path: str | Path) -> pd.DataFrame:
-    """Lit un FASTA brut sans le modifier."""
+    """Lit un FASTA brut sans le modifier.
+
+    Les lignes vides sont ignorées. Un commentaire (``;`` ou ``#``) est
+    toléré avant le premier en-tête ; tout autre texte à cet endroit lève
+    une ``ValueError``.
+    """
     records = []
     header = None
     sequence_parts = []
@@ -39,7 +69,8 @@ def load_challenge(path: str | Path) -> pd.DataFrame:
         if header is not None:
             record = parse_header(header)
             record["sequence"] = "".join(sequence_parts)
-            record["source"] = "AMPChallenge"
+            record["source"] = SOURCE
+            record["dbs_amont"] = record.pop("dbs", None)
             records.append(record)
 
     with open(path, encoding="utf-8-sig") as file:
@@ -57,31 +88,45 @@ def load_challenge(path: str | Path) -> pd.DataFrame:
             else:
                 # Certaines sources ajoutent un commentaire avant le FASTA.
                 if not line.startswith((";", "#")):
-                    raise ValueError("Texte inattendu avant le premier en-tête FASTA")
+                    raise ValueError(
+                        "Texte inattendu avant le premier en-tête FASTA"
+                    )
 
     append_record()
 
-    return pd.DataFrame(
-        records,
-        columns=["sequence", "source", "id", "len", "charge",
-                 "disulfide", "activity", "dbs"]
-    )
+    return pd.DataFrame(records, columns=COLUMNS)
 
 
 def prepare_challenge(path: str | Path):
-    """Normalise et filtre selon les règles de la Semaine 1."""
+    """Normalise et filtre selon les règles de la Semaine 1 (10-50, 20 AA)."""
     raw = load_challenge(path)
     cleaned, rejections = filter_dataframe(raw)
     return cleaned, rejections
 
 
-if __name__ == "__main__":
-    path = Path("data/raw/challenge_antibacterial_20261022.fasta")
-    raw = load_challenge(path)
-    cleaned, rejections = prepare_challenge(path)
+def write_processed(df: pd.DataFrame, path: str | Path = DEFAULT_OUT) -> Path:
+    """Écrit la vue filtrée en UTF-8 et retourne le chemin écrit."""
+    path = Path(path)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    df.to_csv(path, index=False, encoding="utf-8")
+    return path
 
+
+def main(raw_path: str | Path = DEFAULT_RAW,
+         out_path: str | Path = DEFAULT_OUT) -> Path:
+    """Point d'entrée : parse, filtre, écrit, affiche le bilan."""
+    raw = load_challenge(raw_path)
+    cleaned, rejections = prepare_challenge(raw_path)
+    written = write_processed(cleaned, out_path)
+
+    print("Source :", SOURCE)
     print("Entrées brutes :", len(raw))
     print("Entrées conservées :", len(cleaned))
     print("Rejets :", rejections)
-    print("Colonnes :", raw.columns.tolist())
-    print("Premier en-tête interprété :", raw.iloc[0].to_dict())
+    print("Colonnes :", cleaned.columns.tolist())
+    print("Fichier écrit :", written)
+    return written
+
+
+if __name__ == "__main__":
+    main()

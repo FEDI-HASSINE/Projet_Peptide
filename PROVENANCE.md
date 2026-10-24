@@ -208,15 +208,42 @@ mesurable (T38, recouvrement trilatéral).
   et vérification de chaque licence amont ; ce document est mis à jour
   **avant** le partage.
 
-## T34 - Normalisation APD et AMP Challenge
+## T34 — Normalisation APD et AMP Challenge
 
-- APD : naturalAMPs_APD2024a.fasta (site APD6).
-- AMP Challenge : challenge_antibacterial_20261022.fasta.
-- Format : FASTA, lecture sans modification des fichiers bruts.
-- Filtrage : longueur 10 a 50 et alphabet des 20 acides amines canoniques.
-- Residus X/B/Z/J, U/O et autres caracteres non canoniques rejetes sans conversion arbitraire.
-- Les modifications chimiques ne sont pas deduites des sequences FASTA.
-- APD : 3306 sequences brutes, 2796 conservees.
-- AMP Challenge : 39448 sequences brutes, 34474 conservees.
-- Fichiers bruts exclus de Git.
+- Sources : `data/raw/naturalAMPs_APD2024a.fasta` (site APD6) et
+  `data/raw/challenge_antibacterial_20261022.fasta` (AMP Challenge).
+- Format : FASTA, **lecture seule** des fichiers bruts (`utf-8-sig`) ;
+  aucune écriture dans `data/raw/`.
+- Filtrage : `classify_sequence` de `peplib.filters`, déjà utilisé en
+  semaine 1 (alphabet des 20 acides aminés canoniques, longueur 10–50,
+  une seule cause de rejet par séquence, ordre des causes inchangé).
+- **Résidus non canoniques : 0 occurrence observée** dans les deux bruts
+  (alphabet vérifié caractère par caractère). La règle de rejet
+  `X B Z J`, puis `U O`, puis autres caractères n'a donc coûté aucune
+  séquence sur ces deux fichiers.
+- **Amidation : 0 marqueur observé** dans le FASTA APD. Aucune colonne
+  d'annotation n'est créée. Convention retenue pour une source ultérieure
+  qui en contiendrait : annotation dans une colonne dédiée, symbole retiré
+  de la séquence **avant** filtrage, convention revalidée à ce moment-là.
+- **Métadonnées APD3 : dérogation actée le 24/10/2026.** Le FASTA ne
+  contient que `id` et `sequence` ; les colonnes `nom, organisme, cible,
+  activité, unité` exigées par la spécification T34 ne peuvent pas être
+  remplies depuis ce fichier. Aucune colonne n'est fabriquée à vide ;
+  l'ajout se fera depuis l'export tabulaire APD, au plus tard au mois 3,
+  après accord du coordinateur.
+- Métadonnées AMP Challenge : `len`, `charge`, `disulfide`, `activity` et
+  `dbs_amont` extraites des en-têtes et renseignées à **100 %** des
+  39 448 enregistrements bruts. `dbs_amont` conserve les 13 bases amont
+  possibles ; c'est une colonne d'information, elle ne pilote ni filtre ni
+  split (décision T39).
+- Sorties : `data/processed/amp_apd3.csv` et
+  `data/processed/challenge.csv`, colonnes `sequence, source, id`
+  (+ métadonnées pour le Challenge), régénérables par
+  `python -m peplib.download_apd3` et
+  `python -m peplib.download_challenge`.
+- Comptages mesurés : APD **3 306** séquences brutes → **2 796**
+  conservées (82 trop courtes, 428 trop longues) ; AMP Challenge
+  **39 448** brutes → **34 474** conservées (4 974 trop courtes).
+  Invariants « conservées + rejetées = brutes » vérifiés pour les deux.
+- Fichiers bruts exclus de Git (`.gitignore`).
 
