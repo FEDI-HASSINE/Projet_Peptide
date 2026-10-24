@@ -1,10 +1,27 @@
-from peplib.dedup import find_candidate_pairs, sequence_identity
+"""T35 — clustering par composantes connexes à 90 % d'identité.
+
+Les clusters sont des composantes connexes : deux séquences peuvent
+appartenir au même cluster sans que leur identité mutuelle atteigne 90 %
+(chaîne de quasi-doublons). Mesure sur le corpus v0.1 : 229 des 822
+clusters multi-membres (27,9 %) contiennent une paire sous 90 %, la plus
+éloignée à 45,5 % (cluster 1892). T39 doit donc traiter le cluster comme
+l'unité indivisible du split, jamais la paire.
+
+L'artefact produit est `data/processed/clusters_v01_90.csv` : il porte la
+version du corpus qui l'a produit et doit être recalculé sur tout autre
+corpus (v0.2 après T37) avant d'alimenter un split.
+"""
+
+from fractions import Fraction
 from pathlib import Path
 
-import random
 import math
-import pandas as pd
+import random
+
 import matplotlib.pyplot as plt
+import pandas as pd
+
+from peplib.dedup import find_candidate_pairs
 
 
 class UnionFind:
@@ -98,12 +115,29 @@ def levenshtein_bounded(a: str, b: str, max_dist: int) -> int:
 
     return min(prev[m], inf)
 
+
+def max_distance(threshold: float, length: int) -> int:
+    """Distance maximale admissible pour une identité >= threshold.
+
+    Calcul exact : au seuil 0,90, une longueur 10 autorise exactement une
+    édition. Aucun epsilon flottant n'est utilisé.
+    """
+    if not 0 < threshold <= 1:
+        raise ValueError("threshold doit être dans ]0, 1]")
+    return math.floor((1 - Fraction(str(threshold))) * length)
+
+
 def cluster_sequences(
     sequences: list[str],
     threshold: float = 0.90,
     stats: dict | None = None,
 ) -> list[int]:
-    """T35 : clustering à 90 % avec Union-Find."""
+    """T35 : clustering Union-Find à 90 % d'identité.
+
+    Si `stats` est un dict fourni par l'appelant, il est rempli avec les
+    compteurs finaux : `candidats`, `eliminees_longueur`, `comparees`,
+    `fusions`. Le retour reste inchangé (liste d'identifiants de cluster).
+    """
 
     if not 0 < threshold <= 1:
         raise ValueError("threshold doit être dans ]0, 1]")
@@ -134,10 +168,8 @@ def cluster_sequences(
 
         compared_pairs += 1
 
-        # Distance maximale autorisée.
-        max_dist = math.floor(
-            (1.0 - threshold) * max(len(a), len(b)) + 1e-9
-        )
+        # Distance maximale autorisée, calculée exactement.
+        max_dist = max_distance(threshold, max(len(a), len(b)))
 
         # Calcul optimisé de Levenshtein.
         distance = levenshtein_bounded(a, b, max_dist)
@@ -180,10 +212,15 @@ def cluster_sequences(
 
 def run_clustering(
     input_path="data/processed/corpus_filtered_all.csv",
-    output_path="data/processed/clusters_90.csv",
-    figure_path="results/cluster_sizes.png",
+    output_path="data/processed/clusters_v01_90.csv",
+    figure_path="results/cluster_sizes_v01.png",
 ):
-    """T35 : clustering à 90 % et export des résultats."""
+    """T35 : clustering à 90 % et export des résultats.
+
+    Le CSV produit contient une ligne par séquence unique
+    (`sequence, sequence_id, cluster_id, source`) : il est autosuffisant
+    et ne dépend ni d'une jointure ni de l'ordre des lignes du corpus.
+    """
 
     df = pd.read_csv(input_path)
 
@@ -209,10 +246,16 @@ def run_clustering(
     # Une séquence identique reçoit toujours le même cluster.
     mapping = dict(zip(sequences, cluster_ids))
 
+    # Une ligne par séquence unique : l'artefact est autosuffisant.
+    # `drop_duplicates` garde la première occurrence du corpus (identifiant
+    # et source de provenance) ; la séquence porte le cluster.
+    meta = df.drop_duplicates("sequence", keep="first")
+
     result = pd.DataFrame({
-        "sequence_id": df["id"],
-        "cluster_id": df["sequence"].map(mapping),
-        "source": df["source"],
+        "sequence": meta["sequence"].to_numpy(),
+        "sequence_id": meta["id"].to_numpy(),
+        "cluster_id": meta["sequence"].map(mapping).to_numpy(),
+        "source": meta["source"].to_numpy(),
     })
 
     Path(output_path).parent.mkdir(
@@ -223,6 +266,7 @@ def run_clustering(
         output_path,
         index=False,
         encoding="utf-8",
+        lineterminator="\n",
     )
 
     # Distribution des tailles en séquences uniques.
@@ -286,3 +330,8 @@ def run_sample_clustering(
     clusters = cluster_sequences(sample, threshold=threshold, stats=stats)
 
     return clusters, stats
+
+
+if __name__ == "__main__":
+    run_clustering()
+
