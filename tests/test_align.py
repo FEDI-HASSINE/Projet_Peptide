@@ -1,5 +1,7 @@
-"""T36 - Needleman-Wunsch / Smith-Waterman (Gotoh) : ancres de la spec et calculs a la main.
-Convention de gap : L -> G_OPEN + (L-1)*G_EXTEND, avec 11 et 1."""
+"""T36 - Needleman-Wunsch / Smith-Waterman (Gotoh) : ancres de la spec et calculs à la main.
+
+Convention de gap : L -> G_OPEN + (L-1)*G_EXTEND, avec 11 et 1.
+"""
 import random
 
 import pytest
@@ -10,13 +12,13 @@ from peplib.align import (
     score_alignment,
     smith_waterman,
 )
-from peplib.constants import AA_LIST
+from peplib.constants import AA_LIST, blosum62_score
 
 NW = needleman_wunsch
 SW = smith_waterman
 
 
-# ---------- NW : identites (ancres de la spec) ----------
+# ---------- NW : identités (ancres de la spec) ----------
 def test_nw_identity_AAAA():
     r = NW("AAAA", "AAAA")
     assert r.score == 16 and r.aligned_x == r.aligned_y == "AAAA"
@@ -28,7 +30,7 @@ def test_nw_identity_GGGG():
 
 # ---------- NW : gap affine (ancres de la spec) ----------
 def test_nw_one_gap_costs_open():
-    # 4 x 4 = 16, un gap de longueur 1 coute 11  ->  5
+    # 4 x 4 = 16, un gap de longueur 1 coûte 11  ->  5
     r = NW("AAAA", "AAAAA")
     assert r.score == 5
     assert r.aligned_x.count("-") == 1 and len(r.aligned_x) == 5
@@ -36,13 +38,13 @@ def test_nw_one_gap_costs_open():
 
 
 def test_nw_gap_of_three_costs_open_plus_two_extends():
-    # 16 - (11 + 2*1) = 3 : trois '-' d'un coup coutent 13, pas 33
+    # 16 - (11 + 2*1) = 3 : trois '-' d'un coup coûtent 13, pas 33
     r = NW("AAAA", "AAAAAAA")
     assert r.score == 3
     assert r.aligned_x.count("-") == 3
 
 
-# ---------- NW : calculs a la main ----------
+# ---------- NW : calculs à la main ----------
 def test_nw_substitution_by_hand():
     # A/A 4 + C/E -4 + D/D 6 = 6, sans gap
     r = NW("ACD", "AED")
@@ -56,15 +58,57 @@ def test_nw_internal_gap_by_hand():
     assert r.aligned_x == "WKW" and r.aligned_y == "W-W"
 
 
+def test_nw_leading_gap_by_hand():
+    # W/A vaut -3 : le W de tête est forcément décalé, gap de 1 en tête
+    # 4 x A/A = 16, moins 11 -> 5
+    r = NW("AAAA", "WAAAA")
+    assert r.score == 5
+    assert (r.aligned_x, r.aligned_y) == ("-AAAA", "WAAAA")
+
+
+def test_nw_trailing_gap_by_hand():
+    # même calcul, gap en fin : 16 - 11 = 5
+    r = NW("AAAA", "AAAAW")
+    assert r.score == 5
+    assert (r.aligned_x, r.aligned_y) == ("AAAA-", "AAAAW")
+
+
+def test_nw_two_separated_gaps_by_hand():
+    # 6 x W/W = 66, deux gaps de longueur 1 séparés par des appariements
+    # 66 - 2*11 = 44 (et non 66 - 22 refacturé ou 66 - 2*33)
+    r = NW("WWKWWKWW", "WWWWWW")
+    assert r.score == 44
+    assert r.aligned_y.count("-") == 2          # x est le plus long : les gaps sont dans y
+    assert r.aligned_y == "WW-WW-WW"
+
+
 def test_nw_empty_sequences():
     assert NW("", "").score == 0
     assert NW("", "AAA").score == -(11 + 2)   # un gap de longueur 3
     assert NW("AA", "").score == -(11 + 1)
 
 
+# ---------- NW : validation de l'alphabet ----------
 def test_nw_rejects_non_canonical_letters():
     with pytest.raises(ValueError):
         NW("AAXA", "AAAA")
+
+
+@pytest.mark.parametrize("bad", ["X", "B", "Z", "J", "U", "O", "a", "1", "-"])
+def test_nw_rejects_bad_letter_in_either_sequence(bad):
+    with pytest.raises(ValueError):
+        NW("AAA" + bad, "AAAA")
+    with pytest.raises(ValueError):
+        NW("AAAA", "AAA" + bad)
+
+
+@pytest.mark.parametrize("bad", ["X", "B", "Z", "J", "U", "O", "a", "1", "-"])
+def test_check_and_blosum62_score_agree(bad):
+    # une seule règle d'alphabet : _check et blosum62_score refusent les mêmes lettres
+    with pytest.raises(ValueError):
+        NW("AA" + bad, "AAA")
+    with pytest.raises(ValueError):
+        blosum62_score(bad, "A")
 
 
 # ---------- SW ----------
@@ -86,14 +130,44 @@ def test_sw_nothing_in_common_gives_zero():
     assert r.score == 0 and r.aligned_x == "" and r.aligned_y == ""
 
 
-# ---------- Identite par alignement ----------
+def test_sw_empty_sequence_gives_zero():
+    assert SW("", "AAA").score == 0
+    assert SW("AAA", "").score == 0
+
+
+# ---------- score_alignment : score recalculé ----------
+def test_score_alignment_adjacent_opposite_gaps_refacture_open():
+    # motif impossible en sortie de DP (saisie utilisateur seulement) :
+    # un '-' dans x puis un '-' dans y comptent deux ouvertures -> -22
+    assert score_alignment("A-", "-C") == -22
+
+
+def test_score_alignment_rejects_unequal_lengths():
+    # sans garde, zip tronque et rend 19 pour trois colonnes comparées
+    with pytest.raises(ValueError):
+        score_alignment("ACD", "ACDE")
+
+
+def test_score_alignment_rejects_non_canonical_residue():
+    # sans garde, l'indexation directe de BLOSUM62 laisserait fuir un KeyError
+    with pytest.raises(ValueError):
+        score_alignment("AX", "AA")
+
+
+# ---------- Identité par alignement ----------
 def test_alignment_identity_counts_gaps_in_length():
     assert alignment_identity("ACD-", "ACDE") == pytest.approx(0.75)
     assert alignment_identity("AAAA", "AAAA") == 1.0
     assert alignment_identity("", "") == 0.0
 
 
-# ---------- Proprietes sur des paires aleatoires (seed 42) ----------
+def test_alignment_identity_rejects_unequal_lengths():
+    # sans garde, "ACD" / "ACDE" rend 1.0 : trois colonnes comparées, division par 3
+    with pytest.raises(ValueError):
+        alignment_identity("ACD", "ACDE")
+
+
+# ---------- Propriétés sur des paires aléatoires (seed 42) ----------
 def _random_pairs(n=60):
     rnd = random.Random(42)
     out = []
@@ -108,12 +182,12 @@ def _random_pairs(n=60):
 def test_properties_on_random_pairs(x, y):
     g, g_rev = NW(x, y), NW(y, x)
     loc = SW(x, y)
-    # symetrie du score
+    # symétrie du score
     assert g.score == g_rev.score
-    # le score annonce = score recalcule sur l'alignement rendu
+    # le score annoncé = score recalculé sur l'alignement rendu
     assert score_alignment(g.aligned_x, g.aligned_y) == g.score
     assert score_alignment(loc.aligned_x, loc.aligned_y) == loc.score
-    # retirer les '-' redonne les sequences
+    # retirer les '-' redonne les séquences
     assert g.aligned_x.replace("-", "") == x and g.aligned_y.replace("-", "") == y
     # local : >= 0, >= global, et morceaux contigus
     assert loc.score >= 0 and loc.score >= g.score
