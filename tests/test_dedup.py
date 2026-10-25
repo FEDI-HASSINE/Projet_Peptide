@@ -87,3 +87,82 @@ def test_compute_near_duplicates_90_mini_corpus():
     assert st["near_duplicate_pairs"] == 3
     assert st["sequences_in_near_dups"] == 3
     assert st["near_dup_rate"] == pytest.approx(0.6)
+
+def test_kmer_repetitions():
+    # Deux peptides avec 90 % d'identite.
+    a = "AAAAAAAAAA"
+    b = "AAAAAAAACA"
+
+    assert sequence_identity(a, b) == pytest.approx(0.90)
+
+    # Le seul 3-mer distinct commun est AAA.
+    pairs_m1 = find_candidate_pairs([a, b], k=3, min_shared=1)
+    pairs_m3 = find_candidate_pairs([a, b], k=3, min_shared=3)
+
+    assert (0, 1) in pairs_m1
+    assert (0, 1) not in pairs_m3
+
+
+def test_near_duplicates_kmers_repetes():
+    # Verifier que la valeur par defaut m=1 conserve la paire.
+    a = "AAAAAAAAAA"
+    b = "AAAAAAAACA"
+
+    stats = compute_near_duplicates_90([a, b])
+
+    assert stats["near_duplicate_pairs"] == 1
+    assert stats["sequences_in_near_dups"] == 2
+
+
+def test_near_duplicates_min_shared_parametrable():
+    # Verifier le fonctionnement du parametre min_shared.
+    a = "AAAAAAAAAA"
+    b = "AAAAAAAACA"
+
+    stats_m1 = compute_near_duplicates_90(
+        [a, b], min_shared=1
+    )
+
+    stats_m3 = compute_near_duplicates_90(
+        [a, b], min_shared=3
+    )
+
+    assert stats_m1["near_duplicate_pairs"] == 1
+    assert stats_m3["near_duplicate_pairs"] == 0
+
+
+
+def test_kmer_rappel_echantillon():
+    import random
+    import pandas as pd
+
+    # Lire le corpus de peptides v0.1
+    df = pd.read_csv("data/processed/corpus_filtered_all.csv")
+
+    # Tirage reproductible de 200 sequences uniques
+    sequences = sorted(df["sequence"].dropna().unique().tolist())
+    sample = random.Random(42).sample(sequences, 200)
+
+    # Recherche rapide avec les 3-mers
+    candidates = find_candidate_pairs(
+        sample,
+        k=3,
+        min_shared=1,
+    )
+
+    # Recherche exhaustive sans aucun prefiltre
+    vrais_similaires = set()
+
+    for i in range(len(sample)):
+        for j in range(i + 1, len(sample)):
+            if sequence_identity(sample[i], sample[j]) >= 0.90:
+                vrais_similaires.add((i, j))
+
+    # Les vraies paires doivent toutes etre candidates
+    manquantes = vrais_similaires - candidates
+
+    print("\nPaires similaires :", len(vrais_similaires))
+    print("Paires similaires manquees :", len(manquantes))
+
+    assert len(vrais_similaires) > 0
+    assert len(manquantes) == 0
