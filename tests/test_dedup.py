@@ -129,8 +129,8 @@ def test_near_duplicates_min_shared_parametrable():
 
     assert stats_m1["near_duplicate_pairs"] == 1
     assert stats_m3["near_duplicate_pairs"] == 0
-    
-    
+
+
 
 def test_kmer_rappel_echantillon():
     import random
@@ -165,4 +165,4 @@ def test_kmer_rappel_echantillon():
     print("Paires similaires manquees :", len(manquantes))
 
     assert len(vrais_similaires) > 0
-    assert len(manquantes) == 0    
+    assert len(manquantes) == 0
