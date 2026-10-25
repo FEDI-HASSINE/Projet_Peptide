@@ -74,20 +74,30 @@ def sequence_identity(a: str, b: str) -> float:
         return 1.0
     return 1.0 - (levenshtein_distance(a, b) / max_len)
 
-
 def compute_near_duplicates_90(
-    sequences: List[str], threshold: float = 0.90
+    sequences: List[str],
+    threshold: float = 0.90,
+    min_shared: int = 1,
 ) -> Dict[str, float | int]:
-    """T25 — Mesure le taux de quasi-doublons à 90% d'identité.
+    """Mesure les quasi-doublons selon l'identité Levenshtein.
 
-    min_shared=3 : dans la fenêtre 10-50 AA, deux séquences d'identité
-    >= 0.90 partagent au moins 3 3-mers (d <= 0.1*max_len, chaque
-    substitution affecte au plus 3 k-mers, donc >= len-k+1-3*d >= 3
-    k-mers partagés) ; validé par brute-force sur la source AMP
-    (291 paires identiques à un bruteforce exhaustif).
+    min_shared : nombre minimal de k-mers distincts communs.
+    Pour le corpus de peptides 10-50 AA à 90 %, la valeur
+    conservatrice retenue est 1.
+
+    Cette garantie ne s'applique pas automatiquement
+    à l'identité de couverture Smith-Waterman.
     """
+
+    if not 0 < threshold <= 1:
+        raise ValueError("threshold doit être dans ]0, 1]")
+
+    if min_shared < 1:
+        raise ValueError("min_shared doit être >= 1")
+
     unique_seqs = sorted(set(str(s) for s in sequences))
     n_unique = len(unique_seqs)
+
     if n_unique == 0:
         return {
             "unique_sequences": 0,
@@ -96,7 +106,12 @@ def compute_near_duplicates_90(
             "near_dup_rate": 0.0,
         }
 
-    candidates = find_candidate_pairs(unique_seqs, k=3, min_shared=3)
+    candidates = find_candidate_pairs(
+        unique_seqs,
+        k=3,
+        min_shared=min_shared,
+    )
+
     near_dup_seqs: Set[int] = set()
     near_pairs = 0
 
