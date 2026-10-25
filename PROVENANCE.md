@@ -43,7 +43,7 @@ celles des fichiers tels qu'ils sont versionnés (fins de ligne LF).
 - **Version de la base** : UniProt Release 2026 (API REST)
 - **Conditions d'usage / licence** : Creative Commons Attribution (CC BY 4.0) — UniProt Terms of Use (consulté le 17/10/2026 ; usage académique et redistribution autorisés avec citation).
 - **Nombre de lignes brutes** : 12 424 (12 423 séquences + 1 ligne d'en-tête)
-- **Empreinte SHA-256 du fichier brut** : `397959390c4ca2e6f55c5356e281f849398de0461328082f7549e2e1ad42f285`
+- **Empreinte SHA-256 du fichier brut** : `f1c2e6d4a63414e80e241faf127cd935fb8011e1b964f27bd75444b2b97a1a9b`
 - **Fichier brut sauvegardé sous** : `data/raw/uniprot_reviewed_20261017.tsv`
 - **Téléchargement manuel ?** : Non (module `python -m peplib.download_uniprot` avec pagination via en-tête `Link`).
 - **Notes** : peptides de 10 à 50 résidus, uniquement entrées reviewed.
@@ -315,3 +315,68 @@ mesurable (T38, recouvrement trilatéral).
   `data/processed/*.csv` marqué `-text` dans `.gitattributes`).
 - **Figure** : `results/cluster_sizes_v01.png`.
 
+
+---
+
+## T39 — Vues par source du corpus v0.2
+
+- **Date du contrôle** : 25/10/2026
+- **Commande** : `python -m peplib.source_views_v02`
+- **Entrée** : `data/processed/corpus_v0.2.csv`
+- **Méthode** : sélection des séquences selon les atomes de source `UniProt`, `APD3` et `AMPChallenge`. Les combinaisons de sources séparées par `+` ou `|` sont prises en charge.
+- **Sorties** :
+  - `data/processed/view_uniprot_v02.csv`
+  - `data/processed/view_apd3_v02.csv`
+  - `data/processed/view_ampchallenge_v02.csv`
+
+### Résultats
+
+| Source | Séquences |
+|---|---:|
+| UniProt | 9 021 |
+| APD3 | 2 796 |
+| AMPChallenge | 34 474 |
+| **Total des appartenances** | **46 291** |
+| **Séquences uniques du corpus** | **42 575** |
+
+Les 42 575 séquences du corpus sont couvertes. Une séquence présente dans plusieurs sources apparaît dans chacune des vues correspondantes. La différence entre 46 291 appartenances et 42 575 séquences uniques provient des recouvrements.
+
+- **Validation** : 5 tests spécifiques réussis dans `tests/test_source_views_v02.py`.
+- **Diffusion** : les vues contenant des séquences APD6 ou AMP Challenge ne doivent pas être redistribuées publiquement avant clarification des licences.
+
+---
+
+## Biosécurité — Signalement des toxines sur le corpus v0.2
+
+- **Date du contrôle** : 25/10/2026
+- **Commande** : `python -m peplib.check_toxins_v02`
+- **Entrée** : `data/processed/corpus_v0.2.csv`
+- **Annotations utilisées** : `data/raw/uniprot_reviewed_20261017.tsv`
+- **Sortie** : `data/processed/toxin_flags_v02.csv`
+- **Méthode** : jointure par séquence exacte avec UniProt et recherche insensible à la casse de `Toxin|Conotoxin` dans `Protein names` et `Keywords`. Les annotations positives sont agrégées par séquence.
+
+### Résultats
+
+| Statut | Nombre |
+|---|---:|
+| Séquences totales | 42 575 |
+| Signalées (`flagged`) | 1 736 |
+| Non signalées par UniProt (`not_flagged_by_uniprot`) | 7 175 |
+| Sans annotation UniProt (`unknown`) | 33 664 |
+
+**Invariant** : 1 736 + 7 175 + 33 664 = 42 575.
+
+### Limites
+
+- Ce contrôle détecte des annotations textuelles, pas une toxicité biologique démontrée.
+- `not_flagged_by_uniprot` ne signifie pas « non toxique ».
+- `unknown` signifie qu'aucune annotation UniProt correspondante n'est disponible.
+- Les annotations de toxicité d'APD3 et d'AMP Challenge ne sont pas couvertes par cette méthode.
+- L'ancien fichier `data/processed/toxin_flags.json` reste inchangé.
+
+### Reproductibilité
+
+- **SHA-256 de `toxin_flags_v02.csv`** : `f1c2e6d4a63414e80e241faf127cd935fb8011e1b964f27bd75444b2b97a1a9b`
+- **Tests spécifiques** : 6 réussis dans `tests/test_check_toxins_v02.py`.
+- **Suite complète** : 364 tests réussis.
+- **Restriction** : ce contrôle ne constitue pas une validation de sécurité pour un usage thérapeutique.
