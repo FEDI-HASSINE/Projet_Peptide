@@ -63,6 +63,21 @@ def test_encode_rejects_non_canonical(seq):
         encode(seq)
 
 
+def test_encode_accepts_exactly_50_residues():
+    ids = encode("A" * 50)
+    assert len(ids) == 52  # BOS + 50 residus + EOS (max_len)
+    assert decode(ids) == "A" * 50
+    assert pad(ids, 52) == ids
+
+
+def test_encode_rejects_51_residues():
+    # convention max_len = 52 (50 residus) : aucune troncature silencieuse
+    with pytest.raises(ValueError):
+        encode("A" * 51)
+    with pytest.raises(ValueError):
+        encode("A" * 60)
+
+
 # ---------- decode ----------
 def test_decode_by_hand():
     assert decode([1, 3, 8, 2]) == "AG"
