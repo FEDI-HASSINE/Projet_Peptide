@@ -16,7 +16,7 @@ Ce script :
    - identite_globale <= identite_couverture
    - symmetrie NW : score(x,y) == score(y,x)
    - symmetrie des identites : cov(x,y) == cov(y,x), glob(x,y) == glob(y,x)
-5. Sauvegarde un rapport CSV dans results/align_exhaustive_a9.csv.
+5. Sauvegarde un rapport CSV dans results/align_invariants_a9.csv.
 6. Échoue si le nombre de violations > 0.
 """
 import csv
@@ -77,7 +77,7 @@ def test_exhaustive_alignments_a9():
 
     pairs = _draw_pairs(sequences, N_PAIRS, SEED)
     RESULTS_DIR.mkdir(parents=True, exist_ok=True)
-    report_path = RESULTS_DIR / "align_exhaustive_a9.csv"
+    report_path = RESULTS_DIR / "align_invariants_a9.csv"
 
     fieldnames = [
         "x", "y",
