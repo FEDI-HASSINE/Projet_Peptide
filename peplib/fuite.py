@@ -193,6 +193,9 @@ def fractions_F(stats_par_val: pd.DataFrame, seuils=SEUILS) -> dict:
 
 def _figure(courbes: dict, figure: str) -> None:
     """Histogrammes de best_min par split + repères 0,70 / 0,90."""
+    import matplotlib
+
+    matplotlib.use("Agg")   # jamais de fenetre : ecriture de fichier seule
     import matplotlib.pyplot as plt
 
     Path(figure).parent.mkdir(parents=True, exist_ok=True)
@@ -215,9 +218,16 @@ def _figure(courbes: dict, figure: str) -> None:
 
 
 def _ecritures(
-    detail: pd.DataFrame, courbes: dict, sortie_csv: str, figure: str
+    detail: pd.DataFrame, courbes: dict, sortie_csv: str, figure: str,
+    fractions_supp: list = None,
 ) -> pd.DataFrame:
-    """CSV de détail + tableau des fractions F(θ) + figure."""
+    """CSV de détail + tableau des fractions F(θ) + figure.
+
+    ``fractions_supp`` permet d'ajouter des fractions déjà mesurées par une
+    passe précédente terminée pour un split non recalculé dans le présent
+    passage (reprise de calcul, faits conservés du journal — cf.
+    ``run``) ; les lignes finales sont ordonnées clusters puis contrôle.
+    """
     Path(sortie_csv).parent.mkdir(parents=True, exist_ok=True)
     detail.to_csv(sortie_csv, index=False, lineterminator="\n")
 
@@ -228,7 +238,13 @@ def _ecritures(
             fractions.append(
                 {"split": nom, "fraction": nom_fraction, "valeur": valeur}
             )
+    if fractions_supp:
+        fractions.extend(fractions_supp)
     fractions = pd.DataFrame(fractions)
+    if not fractions.empty:
+        fractions = fractions.sort_values(
+            ["split", "fraction"], kind="stable"
+        ).reset_index(drop=True)
     chemin_fractions = Path(sortie_csv).with_name("fuite_fractions.csv")
     fractions.to_csv(chemin_fractions, index=False, lineterminator="\n")
 
@@ -271,14 +287,24 @@ def run(
     sortie_csv="results/week2/fuite.csv",
     figure="results/week2/courbe_fuite.png",
     tau_candidats=TAU_CANDIDATS,
+    splits=("clusters", "controle"),
+    fractions_supp=None,
 ):
     """Courbe de fuite sur les artefacts réels des deux splits.
 
-    Pour chaque split : candidats val->train restreints (coût croisé),
-    SW de chaque candidat, meilleur couple par séquence de val, puis
-    F(0,70) et F(0,90) exactes (un seul passage, cf. docstring de
-    ``candidats_val_train``). Écrit ``fuite.csv`` (détail par séquence),
-    ``fuite_fractions.csv`` (F par split) et la figure.
+    Pour chaque split de ``splits`` : candidats val->train restreints
+    (coût croisé), SW de chaque candidat, meilleur couple par séquence de
+    val, puis F(0,70) et F(0,90) exactes (un seul passage, cf. docstring
+    de ``candidats_val_train``). Écrit ``fuite.csv`` (détail des splits
+    recalculés — un split non recalculé n'a pas de lignes ici),
+    ``fuite_fractions.csv`` (F par split, y compris ``fractions_supp``)
+    et la figure (histogrammes des splits recalculés seulement).
+
+    Reprise de calcul : si un split a déjà été mesuré ENTIEREMENT par une
+    passe précédente (faits conservés du journal d'exécution, cf.
+    ``FAITS_JOURNAL_CLUSTERS``), on ne le recalcule pas : on passe ses
+    fractions dans ``fractions_supp`` pour écrire le tableau complet sans
+    réécrire un unique un calcul.
     """
     detail_lignes = []
     courbes = {}
@@ -286,6 +312,8 @@ def run(
         ("clusters", clusters_dir),
         ("controle", controle_dir),
     ):
+        if nom not in splits:
+            continue
         val = pd.read_csv(
             f"{repertoire}/val_v02.csv", dtype=str
         )["sequence"].tolist()
@@ -303,6 +331,24 @@ def run(
         detail_lignes.append(lignes_split)
         courbes[nom] = stats["best_min"].tolist()
 
-    detail = pd.concat(detail_lignes, ignore_index=True)
-    fractions = _ecritures(detail, courbes, sortie_csv, figure)
+    colonnes = ["split", "sequence", "best_identite", "best_couverture",
+                "best_min"]
+    if detail_lignes:
+        detail = pd.concat(detail_lignes, ignore_index=True)
+    else:
+        detail = pd.DataFrame(columns=colonnes)
+    fractions = _ecritures(
+        detail, courbes, sortie_csv, figure, fractions_supp=fractions_supp
+    )
     return fractions, detail
+
+
+# Résultats de la passe tau = 0,70 sur le split "clusters", obtenus par le
+# premier groupe de calcul du 26/10/2026 : la partie "clusters" est
+# terminée et consignée (journal d'exécution, PROVENANCE.md, PR #22) ; la
+# partie "controle" a été arrêtée par la limite de 4 h du shell et doit
+# être relancée seule. Une reprise de calcul réinjecte ces faits dans
+# ``fractions_supp`` pour écrire le tableau final sans recomputer la
+# partie déjà terminée. NE PAS EDITER : ce sont des sorties de commandes
+# collées, pas des paramètres ajustables.
+FAITS_JOURNAL_CLUSTERS = {"F_70": 0.6071599045346062, "F_90": 0.0}
