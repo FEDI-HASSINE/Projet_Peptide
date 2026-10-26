@@ -500,12 +500,23 @@ Les 42 575 séquences du corpus sont couvertes. Une séquence présente dans plu
   - contrôle aléatoire : F(0,90) = 0,557995, F(0,70) = 0,699761 —
     le contrôle fuit, comme attendu.
   - F(0,70) du split par familles mesuré sur le stock tau = 0,90 :
-    0,333174 — **borne inférieure** ; la passe exacte tau = 0,70
-    (6 710 520 candidats croisés, ~2 h SW) est lancée et mettra à jour
-    `results/week2/fuite_fractions.csv` + `courbe_fuite.png`.
+    0,333174 — **borne inférieure** ; remplacé ci-dessous par la mesure
+    exacte.
+- **Passe exacte tau = 0,70 (résultats du split par familles, journal
+  complet conservé dans `results/week2/journal_fuite_070.log`)** :
+  - candidats croisés évalués : 6 710 520 (split par familles),
+    7 808 555 (contrôle aléatoire, partie en cours de calcul à l'écriture
+    de cette section — les CSV finaux suivent dans un commit séparé) ;
+  - **split par familles : F(0,90) = 0,000000 exact (récupéré avec le
+    catalogue élargi) ET F(0,70) = 0,6071599** (0,607 = densité de cousins
+    à ≥ 70 %/70 %, normalement élevée dans un corpus AMP ; le critère de
+    fuite reste le seuil (0,90 ; 0,90), qui donne zéro) ;
+  - contrôle aléatoire : F(0,90) = 0,557995, F(0,70) final ≈ 0,70 attendu
+    (il fuit par construction).
 - **Sorties** : `results/week2/fuite.csv` (détail par séquence),
   `results/week2/fuite_fractions.csv` (F par split),
-  `results/week2/courbe_fuite.png`.
+  `results/week2/courbe_fuite.png`, 
+  `results/week2/journal_fuite_070.log` (journal d'exécution témoin).
 ## A9 : mesure d'invariants sur paires reelles — results/align_invariants_a9.csv (PR #20)
 
 - **Fichier** : `results/align_invariants_a9.csv` (500 lignes de donnees, entete
