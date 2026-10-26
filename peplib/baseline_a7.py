@@ -54,6 +54,36 @@ def _sequences(csv_path: Path) -> list[str]:
     )
 
 
+def _figure(resultat: pd.DataFrame, out_png: str | Path) -> None:
+    """Trace l'entropie croisee en fonction de l'ordre, les 2 splits.
+
+    Ligne horizontale : ordre 0 uniforme ln 21 ≈ 3,0445 (ancre A7).
+    """
+    import matplotlib
+
+    matplotlib.use("Agg")
+    import matplotlib.pyplot as plt
+
+    fig = plt.figure(figsize=(6.4, 4.2))
+    for split in ("familles", "aleatoire"):
+        d = resultat[resultat["split"] == split].sort_values("ordre")
+        plt.plot(
+            d["ordre"], d["entropie_nats_token"], marker="o", label=split
+        )
+    plt.axhline(
+        math.log(21), color="gray", linestyle="--", linewidth=1,
+        label="uniforme (ordre 0) = ln 21",
+    )
+    plt.xlabel("ordre du n-gram")
+    plt.ylabel("entropie croisee (nats/token)")
+    plt.title("Baselines n-gram A7 : split par familles vs split aleatoire")
+    plt.xticks(list(ORDERS))
+    plt.legend()
+    fig.tight_layout()
+    fig.savefig(out_png, dpi=150)
+    plt.close(fig)
+
+
 def run(
     splits_dir: str | Path = "data/splits",
     control_dir: str | Path = "data/splits_control",
@@ -94,4 +124,7 @@ def run(
     out_csv.parent.mkdir(parents=True, exist_ok=True)
     resultat.to_csv(out_csv, index=False, lineterminator="\n")
     print(f"CSV : {out_csv}", flush=True)
+    figure = out_csv.with_suffix(".png").with_name("ecart_baselines.png")
+    _figure(resultat, figure)
+    print(f"Figure : {figure}", flush=True)
     return resultat

@@ -526,3 +526,41 @@ Les 42 575 séquences du corpus sont couvertes. Une séquence présente dans plu
   chemin d'alignement optimal).
 - **Empreinte SHA-256** (blob referentiel, LF, attribut `-text`) :
   `ab743664e619cbf32a56fe6ae0567619bcd39cfa6432b3b53f42cca60ab4faa6`
+
+
+## Evaluation finale des baselines n-gram (A7) — realisation apres merge de la PR #20
+
+- **Date du calcul** : 26/10/2026 (execute dans la branche de mission Sofiene
+  apres integration de `origin/main` = `ebe5734`, merge de la PR #20 — les
+  splits A6 et le module `baseline_a7` s'y trouvent ensemble pour la
+  premiere fois ; tache Cas 1 de la mission « completer PR #20 »).
+- **Commande** : `python -c "from peplib.baseline_a7 import run; run()"`
+- **Entrees** : `data/splits/{train,val}_v02.csv` (split par FAMILLES) et
+  `data/splits_control/{train,val}_v02.csv` (split ALEATOIRE de controle) ;
+  colonne `sequence` ; seed 42 ; grille d'alpha imposee `(0.01, 0.1, 1.0)`
+  choisie sur val pour chaque ordre.
+- **Mesure** : entropie croisee en nats/token sur 21 cibles (20 AA + EOS ;
+  BOS/PAD jamais cibles), lissage add-alpha dans `peplib/ngram.py`.
+- **Resultats** :
+  | split | ordre | alpha | CE (nats/token) | perplexite |
+  |---|---|---|---|---|
+  | familles | 0 | 0.01 | 3.044522 | 21.000000 |
+  | familles | 1 | 1.00 | 2.969770 | 19.487434 |
+  | familles | 2 | 1.00 | 2.958478 | 19.268631 |
+  | familles | 3 | 1.00 | 2.971710 | 19.525271 |
+  | aleatoire | 0 | 0.01 | 3.044522 | 21.000000 |
+  | aleatoire | 1 | 0.01 | 2.925784 | 18.648847 |
+  | aleatoire | 2 | 0.01 | 2.887591 | 17.950008 |
+  | aleatoire | 3 | 1.00 | 2.798959 | 16.427543 |
+- **Ancre respectee** : ordre 0 = ln 21 exact sur les deux splits.
+- **Lecture** : sur le split par familles, le trigramme NE progresse pas
+  (2.9717 > 2.9585 du bigramme) — l'ordre 3 generalise mal quand val ne
+  partage aucune famille avec train ; sur le split aleatoire la progression
+  est continue (16.43). Les gains restent modestes : ces baselines definissent
+  la reference a battre (gate mois-2 : etre meilleur que le unigramme 21
+  tokens, PP < 19.49 sur familles).
+- **Sorties** : `results/week2/baseline_ngram_A7.csv`,
+  `results/week2/ecart_baselines.png`.
+- **Empreintes SHA-256** :
+  - `baseline_ngram_A7.csv` : `b1f23c74b623f1db5e804d48b9a497c025fe9fe759ff6f85f27f4e602529fe96`
+  - `ecart_baselines.png` : `050dbc67fe066eb29b3c753275a2d80d8287bfe80b5a8a0dab9534ca2e5c5b69`
