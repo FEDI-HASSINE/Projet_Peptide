@@ -174,6 +174,40 @@ def test_larger_pad_to(tmp_csv):
     assert item["labels"].shape[0] == 59
 
 
+# ---------- make_loader : generateur seede (A8) ----------
+
+def test_make_loader_same_seed_same_batches_bitwise(tmp_csv):
+    """Deux parcours d'un loader de meme seed : batchs identiques bit a bit.
+
+    A8 : « meme seed, memes batchs ». On compare chaque batch (input_ids
+    et labels) entre deux loaders construits avec le meme seed et de
+    plusieurs seeds differents pour verifier que le melange change.
+    """
+    from peplib.datasets import make_loader
+
+    dataset = PeptideDataset(tmp_csv, pad_to=MAX_LEN)
+
+    # _TEST_SEQS doit contenir assez d'elements pour > 1 batch.
+    batch_size = max(2, len(dataset) // 2)
+
+    batches_a = list(make_loader(dataset, batch_size=batch_size, shuffle=True, seed=42))
+    batches_b = list(make_loader(dataset, batch_size=batch_size, shuffle=True, seed=42))
+
+    # Deux loaders de meme seed : ordre et contenu strictement identiques.
+    assert len(batches_a) == len(batches_b)
+    for ba, bb in zip(batches_a, batches_b):
+        assert torch.equal(ba["input_ids"], bb["input_ids"])
+        assert torch.equal(ba["labels"], bb["labels"])
+
+    # Un seed different doit melanger autrement (continuité de la convention).
+    batches_c = list(make_loader(dataset, batch_size=batch_size, shuffle=True, seed=43))
+    at_least_one_differs = any(
+        not torch.equal(ba["input_ids"], bc["input_ids"])
+        for ba, bc in zip(batches_a, batches_c)
+    )
+    assert at_least_one_differs
+
+
 # ---------- corpus reel ----------
 
 def test_dataset_on_real_corpus():

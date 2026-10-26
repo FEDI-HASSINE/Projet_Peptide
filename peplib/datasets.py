@@ -142,11 +142,41 @@ class PeptideDataset(Dataset):
 # Fonction utilitaire : creer les trois DataLoaders train/val/test
 # ----------------------------------------------------------------------
 
+def make_loader(
+    dataset: "PeptideDataset",
+    batch_size: int = 64,
+    shuffle: bool = False,
+    seed: int = 42,
+    num_workers: int = 0,
+    drop_last: bool = False,
+) -> "torch.utils.data.DataLoader":
+    """Construit un DataLoader avec un generateur seede (reproductible).
+
+    Le generateur (torch.Generator().manual_seed(seed)) gouverne le
+    melange des batchs : deux loaders construits avec le meme seed
+    produisent exactement les memes batchs dans le meme ordre (A8 :
+    « meme seed, memes batchs »).
+    """
+    from torch.utils.data import DataLoader
+
+    generator = torch.Generator()
+    generator.manual_seed(seed)
+    return DataLoader(
+        dataset,
+        batch_size=batch_size,
+        shuffle=shuffle,
+        num_workers=num_workers,
+        drop_last=drop_last,
+        generator=generator,
+    )
+
+
 def load_splits(
     splits_dir: str | Path = "data/processed/splits",
     pad_to: int = MAX_LEN,
     batch_size: int = 64,
     num_workers: int = 0,
+    seed: int = 42,
 ) -> dict[str, "torch.utils.data.DataLoader"]:
     """Cree un DataLoader pour chacun des fichiers train/val/test.
 
@@ -164,6 +194,9 @@ def load_splits(
         Taille du batch.
     num_workers : int
         Nombre de workers DataLoader (0 = monothread, recommande sur Windows).
+    seed : int
+        Graine du generateur de melange, passee a make_loader (A8 :
+        « meme seed, memes batchs »).
     """
     from torch.utils.data import DataLoader
 
@@ -179,12 +212,12 @@ def load_splits(
             )
         dataset = PeptideDataset(path, pad_to=pad_to)
         shuffle = split == "train"
-        loaders[split] = DataLoader(
+        loaders[split] = make_loader(
             dataset,
             batch_size=batch_size,
             shuffle=shuffle,
+            seed=seed,
             num_workers=num_workers,
-            drop_last=False,
         )
 
     return loaders
