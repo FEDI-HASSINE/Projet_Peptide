@@ -116,19 +116,23 @@ def cluster_v02(
     gap_open: int = 11,
     gap_extend: int = 1,
     stats: dict | None = None,
+    candidats: set | None = None,
 ) -> list:
     """Clustering union-find : paires liées si identité ∧ couverture ≥ tau.
 
     Le retour est une liste d'identifiants de cluster alignés sur l'ordre
     d'entrée de `sequences` (numérotation déterministe des racines triées).
+    `candidats` permet de réutiliser un ensemble de paires déjà produit par
+    ``candidats_par_couverture`` (variantes de gaps : la borne A6 ne dépend
+    que de tau, pas de (o,e) — le même ensemble est sain pour toutes les
+    conventions de gap de la famille BLASTP testées).
     """
     if not 0 < tau <= 1:
         raise ValueError("tau doit être dans ]0, 1]")
 
     unions = UnionFind(len(sequences))
-    candidats = candidats_par_couverture(
-        sequences, tau=tau, stats=stats
-    )
+    if candidats is None:
+        candidats = candidats_par_couverture(sequences, tau=tau, stats=stats)
 
     lignees = 0
     comparees = 0
@@ -172,8 +176,9 @@ def tableau_t13(id_liste: list[int], sortie=T13_PATH) -> pd.DataFrame:
         }
     )
     df = pd.DataFrame(lignes)
-    Path(sortie).parent.mkdir(parents=True, exist_ok=True)
-    df.to_csv(sortie, index=False, lineterminator="\n")
+    if sortie is not None:
+        Path(sortie).parent.mkdir(parents=True, exist_ok=True)
+        df.to_csv(sortie, index=False, lineterminator="\n")
     return df
 
 
