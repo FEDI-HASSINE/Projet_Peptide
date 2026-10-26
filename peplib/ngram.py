@@ -2,14 +2,19 @@
 Modele n-gram pour les peptides (A7 / T41).
 
 Ordres supportes : 0, 1, 2, 3.
-  - Ordre 0 : distribution uniforme sur les 20 AA -> perplexite = 20.
+  - Ordre 0 : distribution uniforme sur les 21 cibles (20 AA + EOS)
+    -> entropie croisee = ln 21 ≈ 3,0445 nats/token, perplexite = 21.
   - Ordre 1 : unigram P(aa), lissage add-alpha.
   - Ordre 2 : bigram  P(aa | aa_{-1}), lissage add-alpha.
   - Ordre 3 : trigram P(aa | aa_{-2}, aa_{-1}), lissage add-alpha.
 
 Lissage add-alpha (Laplace generalise) :
     P(aa | contexte) = (N(contexte, aa) + alpha) / (N(contexte) + alpha * V)
-    V = 20 (taille de l'alphabet canonique).
+    V = 21 (cibles : 20 acides amines + EOS).
+
+Convention de cibles (A7) : chaque sequence se termine par le token cible
+EOS ; BOS (sentinel de contexte) et PAD ne sont JAMAIS cibles. Entropie
+croisee et perplexite se comptent en nats/token, EOS terminal inclus.
 
 Le contexte manquant en debut de sequence est rempli par un sentinel '<BOS>'
 (ordre 2 : 1 sentinel ; ordre 3 : 2 sentinels). Les sentinels ne sont jamais
@@ -28,9 +33,14 @@ from collections import defaultdict
 from typing import Sequence
 
 from peplib.constants import AMINO_ACIDS
+from peplib.tokenizer import EOS_TOKEN
 
-VOCAB_SIZE: int = len(AMINO_ACIDS)   # 20
-_BOS = "<BOS>"                        # sentinel de debut de sequence
+VOCAB_SIZE: int = len(AMINO_ACIDS)   # 20 residus de reference
+_BOS = "<BOS>"                        # sentinel de contexte, jamais cible
+EOS: str = EOS_TOKEN                  # token cible terminal "<EOS>"
+# Cibles (A7) : les 20 AA + EOS = 21 ; BOS et PAD ne sont jamais cibles.
+TARGETS: list[str] = list(AMINO_ACIDS) + [EOS]
+TARGET_SIZE: int = len(TARGETS)       # 21
 
 
 class NgramModel:
@@ -75,7 +85,8 @@ class NgramModel:
         self._counts.clear()
 
         if self.order == 0:
-            # Pas de comptage necessaire : distribution uniforme pure.
+            # Pas de comptage necessaire : distribution uniforme pure
+            # sur les 21 cibles (20 AA + EOS).
             self._fitted = True
             return self
 
@@ -84,7 +95,9 @@ class NgramModel:
                 continue
             # Prepend (order - 1) sentinels pour les contextes de debut.
             context_window = [_BOS] * (self.order - 1)
-            for aa in seq:
+            # Cibles : les residus puis un EOS terminal. EOS est toujours
+            # en derniere position : il n'apparait jamais dans un contexte.
+            for aa in list(seq) + [EOS]:
                 context = tuple(context_window[-(self.order - 1):]) if self.order > 1 else ()
                 self._counts[context][aa] += 1
                 # Faire glisser la fenetre.
@@ -98,54 +111,63 @@ class NgramModel:
     # ------------------------------------------------------------------
 
     def _log_prob_aa(self, aa: str, context: tuple) -> float:
-        """Log-probabilite (base e) de l'acide amine aa etant donne le contexte."""
+        """Log-probabilite (base e) du token cible aa etant donne le contexte."""
+        if aa not in TARGETS:
+            raise ValueError(f"token cible inconnu : {aa!r}")
         if self.order == 0:
-            return math.log(1.0 / VOCAB_SIZE)
+            return math.log(1.0 / TARGET_SIZE)
 
         ctx_counts = self._counts.get(context, {})
         aa_count = ctx_counts.get(aa, 0)
         ctx_total = sum(ctx_counts.values())
 
-        # add-alpha smoothing
-        prob = (aa_count + self.alpha) / (ctx_total + self.alpha * VOCAB_SIZE)
+        # add-alpha smoothing, V = 21 (cibles 20 AA + EOS)
+        prob = (aa_count + self.alpha) / (ctx_total + self.alpha * TARGET_SIZE)
         return math.log(prob)
 
     def log_prob(self, sequence: str) -> float:
-        """Log-vraisemblance (base e) de toute la sequence.
+        """Log-vraisemblance (base e) de la sequence, EOS terminal inclus.
 
-        Retourne 0.0 pour une sequence vide.
-        Leve RuntimeError si le modele n'a pas ete ajuste.
+        Une sequence vide n'a qu'une cible : son seul terme est log P(EOS)
+        (convention A7 : EOS est une cible comme les autres). Leve
+        RuntimeError si le modele n'a pas ete ajuste.
         """
         if not self._fitted:
             raise RuntimeError("NgramModel.fit() doit etre appele avant log_prob()")
-        if not sequence:
-            return 0.0
 
+        tokens = list(sequence) + [EOS]
         total = 0.0
         context_window = [_BOS] * (self.order - 1)
 
-        for aa in sequence:
+        for aa in tokens:
             context = tuple(context_window[-(self.order - 1):]) if self.order > 1 else ()
             total += self._log_prob_aa(aa, context)
             context_window.append(aa)
 
         return total
 
+    def log_prob_target(self, aa: str, context: tuple = ()) -> float:
+        """Log-probabilite d'un token cible (residu ou EOS) pour un contexte.
+
+        Sert aux invariants (somme des probabilites des cibles = 1) : on
+        passe un contexte deja forme, par exemple () pour l'ordre 1.
+        """
+        return self._log_prob_aa(aa, context)
+
     # ------------------------------------------------------------------
     # Perplexite
     # ------------------------------------------------------------------
 
-    def perplexity(self, sequences: Sequence[str]) -> float:
-        """Perplexite du modele sur un ensemble de sequences.
+    def cross_entropy(self, sequences: Sequence[str]) -> float:
+        """Entropie croisee en nats/token, EOS terminal inclus.
 
-        PP = exp( -sum_log_prob / N_total_residus )
-
-        Les sequences vides sont ignorees dans le decompte des residus
-        (elles contribuent 0 au log-prob et 0 au total de tokens).
+        CE = - sum_log_prob / N_tokens, N_tokens comptant les EOS.
         Leve ValueError si aucun residu n'est present dans sequences.
         """
         if not self._fitted:
-            raise RuntimeError("NgramModel.fit() doit etre appele avant perplexity()")
+            raise RuntimeError(
+                "NgramModel.fit() doit etre appele avant cross_entropy()"
+            )
 
         total_log_prob = 0.0
         total_tokens = 0
@@ -154,12 +176,23 @@ class NgramModel:
             if not seq:
                 continue
             total_log_prob += self.log_prob(seq)
-            total_tokens += len(seq)
+            total_tokens += len(seq) + 1   # + 1 : le token EOS terminal
 
         if total_tokens == 0:
             raise ValueError("Aucun residu dans les sequences fournies.")
 
-        return math.exp(-total_log_prob / total_tokens)
+        return -total_log_prob / total_tokens
+
+    def perplexity(self, sequences: Sequence[str]) -> float:
+        """Perplexite = exp(entropie croisee), EOS terminal inclus.
+
+        PP = exp( -sum_log_prob / N_total_tokens )
+
+        Les sequences vides sont ignorees dans le decompte des residus
+        (elles contribuent 0 au log-prob et 0 au total de tokens).
+        Leve ValueError si aucun residu n'est present dans sequences.
+        """
+        return math.exp(self.cross_entropy(sequences))
 
     # ------------------------------------------------------------------
     # Representation
@@ -174,7 +207,7 @@ class NgramModel:
 # Optimisation de alpha sur l'ensemble de validation
 # ----------------------------------------------------------------------
 
-_DEFAULT_ALPHAS = [1e-4, 1e-3, 0.01, 0.05, 0.1, 0.5, 1.0, 2.0, 5.0, 10.0]
+DEFAULT_ALPHAS: tuple[float, ...] = (0.01, 0.1, 1.0)   # grille A7 imposee
 
 
 def tune_alpha(
@@ -194,7 +227,8 @@ def tune_alpha(
     val_seqs : list[str]
         Sequences de validation.
     alphas : list[float] | None
-        Valeurs candidates ; _DEFAULT_ALPHAS par defaut.
+        Valeurs candidates ; DEFAULT_ALPHAS = (0.01, 0.1, 1.0) par defaut
+        (grille imposee par l'ajustement A7, selection sur val).
 
     Returns
     -------
@@ -203,7 +237,7 @@ def tune_alpha(
         perplexite correspondante.
     """
     if alphas is None:
-        alphas = _DEFAULT_ALPHAS
+        alphas = DEFAULT_ALPHAS
 
     if not alphas:
         raise ValueError("La liste alphas ne peut pas etre vide.")
@@ -242,15 +276,15 @@ def run_ngram_eval(
     import pandas as pd
 
     # Charger les sequences
-    splits_path = Path("data/processed/splits")
+    splits_path = Path("data/splits")
     if splits_path.exists():
-        train_path = splits_path / "train.csv"
-        val_path = splits_path / "val.csv"
+        train_path = splits_path / "train_v02.csv"
+        val_path = splits_path / "val_v02.csv"
         if train_path.exists() and val_path.exists():
             train_seqs = pd.read_csv(train_path)["sequence"].dropna().astype(str).tolist()
             val_seqs = pd.read_csv(val_path)["sequence"].dropna().astype(str).tolist()
         else:
-            raise FileNotFoundError("Splits A6 incomplets dans data/processed/splits/")
+            raise FileNotFoundError("Splits A6 incomplets dans data/splits/")
     else:
         # Repli : split interne reproductible
         all_seqs = pd.read_csv(corpus_path)["sequence"].dropna().astype(str).tolist()
