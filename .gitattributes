@@ -4,5 +4,8 @@
 data/raw/*.tsv -text
 data/processed/*.json -text
 data/processed/*.csv -text
+# Splits v0.2 (meme contrat que data/processed : fins de ligne figurees aux empreintes)
+data/splits/*.csv -text
+data/splits_control/*.csv -text
 results/*.csv -text
 results/week2/*.csv -text

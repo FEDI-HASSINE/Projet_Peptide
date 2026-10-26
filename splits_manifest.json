@@ -1,0 +1,42 @@
+{
+  "comptes_par_partie": {
+    "test": 2144,
+    "train": 38336,
+    "val": 2095
+  },
+  "comptes_partie_par_source": {
+    "test": {
+      "AMPChallenge": 1735,
+      "APD3": 139,
+      "UniProt": 444
+    },
+    "train": {
+      "AMPChallenge": 30996,
+      "APD3": 2516,
+      "UniProt": 8118
+    },
+    "val": {
+      "AMPChallenge": 1743,
+      "APD3": 141,
+      "UniProt": 459
+    }
+  },
+  "controle_aleatoire": {
+    "methode": "tirage aleatoire des memes tailles, seed 42",
+    "repertoire": "data/splits_control",
+    "sha256": {
+      "test": "5c08d554b7628f601faa41753fc42a57a285b9f172ec16f5d7843ad9d4e7cd21",
+      "train": "09dc0705d5949ecfc2f1df7582699b292ce82b82181c50d851979ace6cafd720",
+      "val": "2562db6b258f26509e7730f58da2c7114db259bfe61d7aa58553966092b98b7a"
+    }
+  },
+  "methodee": "split 90/5/5 par familles (clusters v0.2 couverture 0,90), stratifi\u00e9 par source d'ingestion, familles > 1 % en train",
+  "seed": 42,
+  "sha256": {
+    "test": "b3c82a07673ab2ab534666103405186da5b1f4217693acf5f811afeb53e62cc5",
+    "train": "f9016bc038ed473870e76e4a849962813ef010ac3079c31e227309aa4349e736",
+    "val": "f0a17569bf62be16ab931a1f8b47f8c62baad27f509bb62e816aad59f7dbb3a5"
+  },
+  "tolerance": "\u00b10,5 point",
+  "version": "v0.2"
+}
