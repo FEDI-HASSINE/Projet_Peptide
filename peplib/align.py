@@ -5,10 +5,11 @@ avec pénalités de gap affines (Gotoh). Écrit à la main, sans outil externe (
 CONVENTION DE GAP (à ne pas changer sans mettre à jour les tests) :
     un gap de longueur L coûte  G_OPEN + (L - 1) * G_EXTEND
     -> le 1er '-' coûte G_OPEN, chaque '-' suivant coûte G_EXTEND.
-Valeurs par défaut G_OPEN = 11, G_EXTEND = 1 : ce sont les valeurs par défaut de
-BLASTP pour BLOSUM62. Attention : BLAST compte un gap de longueur L à 11 + L*1,
-soit 1 point de plus par gap que notre convention (la nôtre = BLAST avec open 10).
-Toute divergence d'ancre avec un autre outil vient de cette convention, pas du code.
+Valeurs par défaut G_OPEN = 11, G_EXTEND = 1 : valeurs proposées par la
+spécification de la semaine 2 (T36).
+Attention : deux conventions existent (open + (L-1) x extend, la nôtre, contre
+open + L x extend). Toute divergence d'ancre avec un autre outil vient de cette
+convention, pas du code.
 
 Score d'un alignement = somme des scores BLOSUM62 des paires alignées
                         - somme des pénalités de gap.
@@ -185,3 +186,59 @@ def alignment_identity(aligned_x: str, aligned_y: str) -> float:
         return 0.0
     same = sum(1 for a, b in zip(aligned_x, aligned_y) if a == b and a != "-")
     return same / len(aligned_x)
+
+
+def identite_couverture(aligned_x: str, aligned_y: str) -> float:
+    """Positions identiques / longueur de la séquence la plus courte (sans gaps).
+
+    Convention dite « coverage » : normalisée par min(len_x_sans_gap, len_y_sans_gap).
+    C'est le critère retenu pour les clusters v0.2 (seuil 0,90, A5).
+
+    Deux chaînes vides (après retrait des gaps) -> 0.0.
+    Longueurs d'alignement différentes -> ValueError.
+
+    Relation avec alignment_identity : identite_couverture >= alignment_identity,
+    car le denominateur est au plus egal a la longueur de l'alignement.
+    """
+    if len(aligned_x) != len(aligned_y):
+        raise ValueError(
+            f"alignements de longueurs differentes : {len(aligned_x)} != {len(aligned_y)}"
+        )
+    x_len = len(aligned_x.replace("-", ""))
+    y_len = len(aligned_y.replace("-", ""))
+    denom = min(x_len, y_len)
+    if denom == 0:
+        return 0.0
+    same = sum(
+        1 for a, b in zip(aligned_x, aligned_y)
+        if a == b and a != "-"
+    )
+    return same / denom
+
+
+def identite_globale(aligned_x: str, aligned_y: str) -> float:
+    """Positions identiques / longueur de la séquence la plus longue (sans gaps).
+
+    Convention dite « global » : normalisee par max(len_x_sans_gap, len_y_sans_gap).
+    Utilisee comme second critere en A5/T14 (seuil 0,70 identite globale,
+    parametrages (o, e) in {(11,1),(10,1),(8,2)}).
+
+    Deux chaînes vides (apres retrait des gaps) -> 0.0.
+    Longueurs d'alignement differentes -> ValueError.
+
+    Relation : identite_globale <= identite_couverture <= 1.0.
+    """
+    if len(aligned_x) != len(aligned_y):
+        raise ValueError(
+            f"alignements de longueurs differentes : {len(aligned_x)} != {len(aligned_y)}"
+        )
+    x_len = len(aligned_x.replace("-", ""))
+    y_len = len(aligned_y.replace("-", ""))
+    denom = max(x_len, y_len)
+    if denom == 0:
+        return 0.0
+    same = sum(
+        1 for a, b in zip(aligned_x, aligned_y)
+        if a == b and a != "-"
+    )
+    return same / denom
