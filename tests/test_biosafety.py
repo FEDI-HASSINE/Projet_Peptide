@@ -72,6 +72,25 @@ def test_toxin_pattern_matches_conotoxin_alone():
     ).tolist() == [True]
 
 
+def test_flag_toxins_detects_venom():
+    # Relecture PR #19 (B2) : les annotations de venin doivent être signalées.
+    df = pd.DataFrame(
+        {"Entry": ["X"], "Protein.name": ["Cysteine-rich venom protein"]}
+    )
+    assert flag_toxins(df)["is_toxin"].tolist() == [True]
+
+
+def test_flag_toxins_detects_toxic():
+    df = pd.DataFrame({"Entry": ["X"], "Protein.name": ["Toxic peptide"]})
+    assert flag_toxins(df)["is_toxin"].tolist() == [True]
+
+
+def test_flag_toxins_over_inclusive_is_fail_safe():
+    # Mode d'échec sûr : même "non-toxic" est signalé (doute = flagué).
+    df = pd.DataFrame({"Entry": ["X"], "Protein.name": ["Non-toxic marker"]})
+    assert flag_toxins(df)["is_toxin"].tolist() == [True]
+
+
 def test_write_toxin_flags_produces_expected_records(tmp_path, sample_df):
     out = tmp_path / "flags.json"
     write_toxin_flags(flag_toxins(sample_df), str(out))

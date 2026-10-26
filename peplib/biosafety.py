@@ -10,11 +10,14 @@ import os
 
 import pandas as pd
 
-# Motif de détection appliqué à la concaténation de toutes les colonnes
-# textuelles d'une entrée. "Toxin" couvre déjà "Conotoxin" en casse ignorée ;
-# les deux termes sont conservés pour rester explicites et compatibles avec le
-# rapport de biosécurité déjà produit.
-TOXIN_PATTERN = "Toxin|Conotoxin"
+# Motif de détection appliqué aux annotations textuelles ("Protein names"
+# et "Keywords"). "Toxin" couvre déjà "Conotoxin" en casse ignorée ; les
+# deux termes sont conservés pour rester explicites. "Venom" couvre les
+# protéines de venin (dont "envenomation") et "Toxic" couvre toxic /
+# toxicity. Le motif est volontairement SUR-inclusif (une description
+# "non-toxic" est aussi signalée) : le mode d'échec doit être sûr — le
+# doute est toujours signalé (relecture PR #19, point B2).
+TOXIN_PATTERN = "Toxin|Conotoxin|Venom|Toxic"
 
 # Colonnes candidates pour l'identifiant, par ordre de préférence.
 ID_COLUMNS = ("Entry", "Accession")

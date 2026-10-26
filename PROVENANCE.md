@@ -315,3 +315,73 @@ mesurable (T38, recouvrement trilatéral).
   `data/processed/*.csv` marqué `-text` dans `.gitattributes`).
 - **Figure** : `results/cluster_sizes_v01.png`.
 
+
+---
+
+## T39 — Vues par source du corpus v0.2
+
+- **Date du contrôle** : 25/10/2026
+- **Commande** : `python -m peplib.source_views_v02`
+- **Entrée** : `data/processed/corpus_v0.2.csv`
+- **Méthode** : sélection des séquences selon les atomes de source `UniProt`, `APD3` et `AMPChallenge`. Les combinaisons de sources séparées par `+` ou `|` sont prises en charge.
+- **Sorties** :
+  - `data/processed/view_uniprot_v02.csv` (SHA-256 : `73d783156b45b511805f7454d40ddcc6304ee815d609caaaec86368a7475c507`)
+  - `data/processed/view_apd3_v02.csv` (SHA-256 : `8703517a27d0417dfb6eb1d5107805f59ab3dae034091a9ad677ea34bde2fd26`)
+  - `data/processed/view_ampchallenge_v02.csv` (SHA-256 : `62cc0ac3a45a640070ec62f282a445779e21b96fd5164a8782553b6c2ce061e1`)
+
+### Résultats
+
+| Source | Séquences |
+|---|---:|
+| UniProt | 9 021 |
+| APD3 | 2 796 |
+| AMPChallenge | 34 474 |
+| **Total des appartenances** | **46 291** |
+| **Séquences uniques du corpus** | **42 575** |
+
+Les 42 575 séquences du corpus sont couvertes. Une séquence présente dans plusieurs sources apparaît dans chacune des vues correspondantes. La différence entre 46 291 appartenances et 42 575 séquences uniques provient des recouvrements.
+
+- **Validation** : 5 tests spécifiques réussis dans `tests/test_source_views_v02.py`.
+- **Diffusion** : les vues contenant des séquences APD6 ou AMP Challenge ne doivent pas être redistribuées publiquement avant clarification des licences.
+
+---
+
+## Biosécurité — Signalement des toxines sur le corpus v0.2
+
+- **Date du contrôle** : 25/10/2026
+- **Commande** : `python -m peplib.check_toxins_v02`
+- **Entrée** : `data/processed/corpus_v0.2.csv`
+- **Annotations utilisées** : `data/raw/uniprot_reviewed_20261017.tsv`
+- **Sortie** : `data/processed/toxin_flags_v02.csv`
+- **Méthode** : jointure par séquence exacte avec UniProt et recherche insensible à la casse de `Toxin|Conotoxin|Venom|Toxic` dans `Protein names` et `Keywords`. Le motif est volontairement sur-inclusif (une description « non-toxic » est aussi signalée) : le mode d'échec est sûr. Les annotations positives sont agrégées par séquence. Correction relecture PR #19 (B2) : « Venom » et « Toxic » ajoutés — 50 séquences du corpus portant des annotations de venin/toxicité étaient précédemment `not_flagged_by_uniprot`.
+
+### Résultats
+
+| Statut | Nombre |
+|---|---:|
+| Séquences totales | 42 575 |
+| Signalées (`flagged`) | 1 786 |
+| Non signalées par UniProt (`not_flagged_by_uniprot`) | 7 125 |
+| Sans annotation UniProt (`unknown`) | 33 664 |
+
+**Invariant** : 1 786 + 7 125 + 33 664 = 42 575.
+
+### Limites
+
+- Ce contrôle détecte des annotations textuelles, pas une toxicité biologique démontrée.
+- `not_flagged_by_uniprot` ne signifie pas « non toxique ».
+- `unknown` signifie qu'aucune annotation UniProt correspondante n'est disponible.
+- Les annotations de toxicité d'APD3 et d'AMP Challenge ne sont pas couvertes par cette méthode.
+- 110 séquences d'origine UniProt du corpus ne figurent pas dans le TSV d'annotations (accessions vérifiées absentes, ni par `Entry`, ni par séquence) : leur statut est forcé à `unknown`. À réconcilier (requête REST par accession ou alignement du corpus sur le raw) **avant le clustering v0.2** (ajustements A5/A6).
+- L'ancien fichier `data/processed/toxin_flags.json` reste inchangé.
+
+### Reproductibilité
+
+- **SHA-256 de `toxin_flags_v02.csv`** : `171f150b7a41871c2d10b762756d8cf7ed1aae4fbbd69981557ec6056180d314` (fichier LF, sans BOM ;
+  `data/processed/*.csv` marqué `-text` dans `.gitattributes`).
+- **Tests spécifiques** : 11 réussis dans `tests/test_check_toxins_v02.py` (dont « Venom peptide » flague)
+  ; le motif élargi est verrouillé par 3 tests ajoutés dans `tests/test_biosafety.py` ; les artefacts v0.2
+  (comptes et empreinte) sont verrouillés par 4 tests dans `tests/test_artefacts_v02.py` (style B10).
+- **Suite complète** : 369 tests réussis (Python 3.14 et 3.11).
+- **Restriction** : ce contrôle ne constitue pas une validation de sécurité pour un usage thérapeutique.
+- **Clause de consommation** : tout consommateur du corpus génératif v0.2 (splits A6, génération) doit joindre `toxin_flags_v02.csv` par `sequence` et traiter `unknown` comme `flagged` (mode d'échec sûr).
