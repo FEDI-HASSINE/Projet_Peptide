@@ -51,3 +51,16 @@ def test_clusters_v02_grande_famille_depassela_regles():
     plus_grande = df["cluster_id"].value_counts().max()
     assert plus_grande == 4_541
     assert plus_grande > 0.01 * N_CORPUS_V02
+
+
+def test_representants_v02_verrouille():
+    """T42 : un representant par famille, couverture complete en effectifs."""
+    reps = pd.read_csv("data/processed/representants_v02.csv", dtype=str)
+    assert list(reps.columns) == [
+        "sequence", "sequence_id", "cluster_id", "sources", "taille_famille"
+    ]
+    assert len(reps) == 20_673               # une ligne par famille v0.2
+    assert reps["sequence"].is_unique
+    assert set(reps["cluster_id"]) == set(_lit_clusters()["cluster_id"])
+    # les effectifs somment au corpus complet (couverture de familles)
+    assert reps["taille_famille"].astype(int).sum() == N_CORPUS_V02
