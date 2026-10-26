@@ -502,8 +502,7 @@ Les 42 575 séquences du corpus sont couvertes. Une séquence présente dans plu
   - F(0,70) du split par familles mesuré sur le stock tau = 0,90 :
     0,333174 — **borne inférieure** ; remplacé ci-dessous par la mesure
     exacte.
-- **Passe exacte tau = 0,70 (résultats du split par familles, journal
-  complet conservé dans `results/week2/journal_fuite_070.log`)** :
+- **Passe exacte tau = 0,70 (résultats du split par familles)** :
   - candidats croisés évalués : 6 710 520 (split par familles),
     7 808 555 (contrôle aléatoire, partie en cours de calcul à l'écriture
     de cette section — les CSV finaux suivent dans un commit séparé) ;
@@ -515,8 +514,11 @@ Les 42 575 séquences du corpus sont couvertes. Une séquence présente dans plu
     (il fuit par construction).
 - **Sorties** : `results/week2/fuite.csv` (détail par séquence),
   `results/week2/fuite_fractions.csv` (F par split),
-  `results/week2/courbe_fuite.png`, 
-  `results/week2/journal_fuite_070.log` (journal d'exécution témoin).
+  `results/week2/courbe_fuite.png`. Le journal d'exécution complet est
+  conservé HORS DÉPÔT (règle `*.log` de `.gitignore`) : le chiffre témoin
+  « Paires évaluées : 6 710 520 » du journal est cité intégralement
+  ci-dessus ; les CSV finaux (y compris le contrôle aléatoire, partie en
+  cours à l'écriture de cette section) suivent dans un commit séparé.
 ## A9 : mesure d'invariants sur paires reelles — results/align_invariants_a9.csv (PR #20)
 
 - **Fichier** : `results/align_invariants_a9.csv` (500 lignes de donnees, entete
