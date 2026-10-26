@@ -47,6 +47,7 @@ MANIFEST_PATH = "splits_manifest.json"
 
 def assigner_familles(
     comptes_familles: dict,
+    sources_atomes: dict | None = None,
     total: int | None = None,
     taux: tuple = TAUX,
     tolerance: float = TOLERANCE,
@@ -54,64 +55,91 @@ def assigner_familles(
 ) -> dict:
     """Affecte chaque famille à une partie, de façon déterministe.
 
-    comptes_familles : {cluster_id: effectif}. Retour
-    {cluster_id: "train"|"val"|"test"}. Algorithme (documenté, à valider) :
+    comptes_familles : {cluster_id: effectif}. sources_atomes : optionnel,
+    {cluster_id: {atome: effectif}} — atomes de la colonne `sources`. Retour
+    {cluster_id: "train"|"val"|"test"}.
+
+    Algorithme (documenté, à valider en PR) :
 
       1. familles de plus de ``seuil_grande`` × total → train sans exception ;
-      2. remplissage de val : familles restantes triées par taille
-         décroissante (égalité : numéro croissant) ; une famille trop
-         grosse pour tenir sous « cible + tolérance » est SAUTÉE (elle
-         ira au train), ce qui garantit la terminaison ;
-      3. remplissage de test sur les restantes, même règle ;
-      4. tout le reste va au train ;
-      5. vérification finale ±tolérance ; sinon ValueError avec le
-         relevé des écarts (aucun epsilon improvisé).
+      2. familles restantes triées par taille décroissante (égalité :
+         numéro de famille croissant) ;
+      3. affectation gloutonne au moindre coût : pour chaque famille, le
+         coût d'une partie vaut la somme des carrés des dépassements —
+         dépassement de taille (effectif partie > cible taille) et
+         dépassements par atome (effectif atome de la partie > cible
+         atome = taux_part × effectif global de l'atome) ; égalité de
+         coût : ordre train < val < test ;
+      4. vérification finale ±tolérance par partie ; sinon ValueError avec
+         le relevé des écarts (aucun epsilon improvisé).
 
-    La stratification par source est réalisée par le remplissage et
-    MESURÉE : les mixtures par atome par partie sont rapportées dans le
-    manifeste (décomposition des atomes de la colonne `sources`).
+    Ce coût par atome EST la stratification par source : chaque partie est
+    poussée vers la mixture globale (UniProt / APD3 / AMPChallenge) selon
+    les familles disponibles. Les mixtures obtenues sont mesurées et
+    écrites dans le manifeste.
     """
     if total is None:
         total = sum(comptes_familles.values())
     cibles = {part: taux[i] * total for i, part in enumerate(PARTIES)}
 
+    atomes = sorted(
+        {a for vect in (sources_atomes or {}).values() for a in vect}
+    )
+    totaux_atomes = {
+        atome: sum(
+            vect.get(atome, 0) for vect in (sources_atomes or {}).values()
+        )
+        for atome in atomes
+    }
+    cibles_atomes = {
+        part: {
+            atome: taux[PARTIES.index(part)] * totaux_atomes[atome]
+            for atome in atomes
+        }
+        for part in PARTIES
+    }
+
     affectation = {}
     remplies = {part: 0 for part in PARTIES}
+    rempli_atomes = {part: {a: 0 for a in atomes} for part in PARTIES}
 
     # 1. familles trop grandes : train, sans exception.
     for cid, n in comptes_familles.items():
         if n > seuil_grande * total:
             affectation[cid] = "train"
             remplies["train"] += n
+            for atome, v in (sources_atomes or {}).get(cid, {}).items():
+                rempli_atomes["train"][atome] += v
 
     restantes = sorted(
         (cid for cid in comptes_familles if cid not in affectation),
         key=lambda cid: (-comptes_familles[cid], cid),
     )
 
-    # 2-4. remplissage de val, puis de test ; le reste au train.
-    # Règle d'ajout : (a) la famille tient sous la cible exacte, OU (b) la
-    # partie est encore sous son minimum (cible − tolérance) ET la famille
-    # reste sous « cible + tolérance » (dépassement exceptionnel chiffré).
-    for part_cible in ("val", "test"):
-        for cid in list(restantes):
-            n = comptes_familles[cid]
-            remplies_avant = remplies[part_cible]
-            tient = remplies_avant + n <= cibles[part_cible]
-            sous_minimum = remplies_avant < cibles[part_cible] - tolerance * total
-            dans_limite = (
-                remplies_avant + n <= cibles[part_cible] + tolerance * total
-            )
-            if tient or (sous_minimum and dans_limite):
-                affectation[cid] = part_cible
-                remplies[part_cible] += n
-                restantes.remove(cid)
-
+    # 2-3. affectation gloutonne au moindre coût (taille + atomes).
     for cid in restantes:
-        affectation[cid] = "train"
-        remplies["train"] += comptes_familles[cid]
+        n = comptes_familles[cid]
+        vect = (sources_atomes or {}).get(cid, {})
+        couts = []
+        for indice_part, part in enumerate(PARTIES):
+            depasse = max(0, remplies[part] + n - cibles[part])
+            cout = depasse * depasse
+            for atome, valeur_atomique in vect.items():
+                depasse_atom = max(
+                    0,
+                    rempli_atomes[part][atome]
+                    + valeur_atomique
+                    - cibles_atomes[part].get(atome, 0),
+                )
+                cout += depasse_atom * depasse_atom
+            couts.append((cout, indice_part, part))
+        affectation[cid] = min(couts)[2]
+        part = affectation[cid]
+        remplies[part] += n
+        for atome, v in vect.items():
+            rempli_atomes[part][atome] += v
 
-    # 5. vérification finale.
+    # 4. vérification finale.
     hors = {
         part: int(round(remplies[part] - cibles[part]))
         for part in PARTIES
@@ -221,10 +249,19 @@ def run(
         ["sequence", "sources", "ids", "cluster_id", "toxicity_status"]
     ]
 
-    # Affectation au niveau des familles.
+    # Affectation au niveau des familles, guidée par la mixture par source.
     comptes_familles = rows.groupby("cluster_id").size().to_dict()
     total = len(rows)
-    affectation = assigner_familles(comptes_familles, total=total)
+    sources_atomes = {}
+    for cid, groupe in rows.groupby("cluster_id"):
+        vect: dict = {}
+        for chaine in groupe["sources"]:
+            for atome in chaine.split(SEPARATEUR_SOURCES):
+                vect[atome] = vect.get(atome, 0) + 1
+        sources_atomes[cid] = vect
+    affectation = assigner_familles(
+        comptes_familles, sources_atomes=sources_atomes, total=total
+    )
 
     parts = {
         part: rows[rows["cluster_id"].map(affectation) == part].reset_index(
