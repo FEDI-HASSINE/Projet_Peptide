@@ -506,3 +506,23 @@ Les 42 575 séquences du corpus sont couvertes. Une séquence présente dans plu
 - **Sorties** : `results/week2/fuite.csv` (détail par séquence),
   `results/week2/fuite_fractions.csv` (F par split),
   `results/week2/courbe_fuite.png`.
+## A9 : mesure d'invariants sur paires reelles — results/align_invariants_a9.csv (PR #20)
+
+- **Fichier** : `results/align_invariants_a9.csv` (500 lignes de donnees, entete
+  `x,y,nw_score,sw_score,cov_xy,glob_xy,cov_yx,glob_yx,violations`),
+  produit par `tests/test_align_exhaustive.py` (une seule execution, role
+  « Youssef mesure » du plan A9 ; la verification d'OPTIMALITE par enumeration
+  est faite separetement dans la mission Sofiene — roles complementaires).- **Methode** : tirage de 500 paires de sequences uniques du corpus v0.2
+  (seed 42), application de NW, SW, `identite_couverture` et
+  `identite_globale` a chaque paire, puis controle des invariants :
+  score recalcule == score annonce (NW et SW), SW >= NW, SW >= 0,
+  identites dans [0, 1], `identite_globale <= identite_couverture`,
+  symetrie NW(x,y) = NW(y,x) et des deux identites.
+- **Resultat** : les 500 lignes portent `violations = OK` (aucun invariant
+  enfreint).
+- **Limite** : controle d'INVARIANTS sur paires reelles, PAS une preuve
+  d'optimalite par enumeration exhaustive (cette derniere verrouille
+  `align.py` ailleurs ; ici on verifie la COHERENCE des sorties, pas le
+  chemin d'alignement optimal).
+- **Empreinte SHA-256** (blob referentiel, LF, attribut `-text`) :
+  `ab743664e619cbf32a56fe6ae0567619bcd39cfa6432b3b53f42cca60ab4faa6`

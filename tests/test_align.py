@@ -193,3 +193,102 @@ def test_properties_on_random_pairs(x, y):
     assert loc.score >= 0 and loc.score >= g.score
     assert loc.aligned_x.replace("-", "") == x[loc.x_start:loc.x_end]
     assert loc.aligned_y.replace("-", "") == y[loc.y_start:loc.y_end]
+
+
+# ---------- T7 : identite_couverture et identite_globale ----------
+from peplib.align import identite_couverture, identite_globale
+
+
+# --- ancres calculées à la main ---
+
+def test_identite_couverture_perfect_no_gaps():
+    # Aucun gap, identique : couverture = 1.0
+    assert identite_couverture("AAAA", "AAAA") == pytest.approx(1.0)
+
+
+def test_identite_globale_perfect_no_gaps():
+    assert identite_globale("AAAA", "AAAA") == pytest.approx(1.0)
+
+
+def test_identite_couverture_gap_in_longer():
+    # aligned_x = "AAAA-", aligned_y = "AAAAW"
+    # x_sans_gap = 4, y_sans_gap = 5 -> min = 4
+    # identiques : A/A A/A A/A A/A (4 match, gap non compté)
+    # identite_couverture = 4/4 = 1.0
+    r = NW("AAAA", "AAAAW")
+    assert r.aligned_x == "AAAA-" and r.aligned_y == "AAAAW"
+    assert identite_couverture(r.aligned_x, r.aligned_y) == pytest.approx(1.0)
+
+
+def test_identite_globale_gap_in_longer():
+    # même alignement : max(4, 5) = 5, 4 matches -> 4/5 = 0.8
+    r = NW("AAAA", "AAAAW")
+    assert identite_globale(r.aligned_x, r.aligned_y) == pytest.approx(0.8)
+
+
+def test_identite_couverture_internal_substitution():
+    # NW("ACD", "AED") -> "ACD" / "AED", score = 6, aucun gap
+    # identiques : A/A (1), D/D (1) ; non identique C/E
+    # x_len = y_len = 3, min = 3 -> 2/3
+    r = NW("ACD", "AED")
+    assert r.aligned_x == "ACD" and r.aligned_y == "AED"
+    assert identite_couverture(r.aligned_x, r.aligned_y) == pytest.approx(2 / 3)
+
+
+def test_identite_globale_internal_substitution():
+    # max(3, 3) = 3 -> 2/3
+    r = NW("ACD", "AED")
+    assert identite_globale(r.aligned_x, r.aligned_y) == pytest.approx(2 / 3)
+
+
+def test_identite_couverture_empty_strings():
+    assert identite_couverture("", "") == 0.0
+
+
+def test_identite_globale_empty_strings():
+    assert identite_globale("", "") == 0.0
+
+
+def test_identite_couverture_rejects_unequal_lengths():
+    with pytest.raises(ValueError):
+        identite_couverture("ACD", "ACDE")
+
+
+def test_identite_globale_rejects_unequal_lengths():
+    with pytest.raises(ValueError):
+        identite_globale("ACD", "ACDE")
+
+
+def test_identite_all_gaps_in_x():
+    # aligned_x = "---", aligned_y = "AAA" : x_sans_gap = 0, denom = min(0,3) = 0
+    assert identite_couverture("---", "AAA") == 0.0
+    assert identite_globale("---", "AAA") == 0.0
+
+
+# --- invariants sur paires aléatoires ---
+
+@pytest.mark.parametrize("x, y", _random_pairs())
+def test_identite_couverture_globale_invariants(x, y):
+    g = NW(x, y)
+    cov = identite_couverture(g.aligned_x, g.aligned_y)
+    glob = identite_globale(g.aligned_x, g.aligned_y)
+    ai = alignment_identity(g.aligned_x, g.aligned_y)
+
+    # bornes
+    assert 0.0 <= glob <= cov <= 1.0
+    # couverture >= alignment_identity
+    assert cov >= ai - 1e-12
+    # symmetrie : NW(y, x) donne le meme score d'identite
+    g_rev = NW(y, x)
+    cov_rev = identite_couverture(g_rev.aligned_x, g_rev.aligned_y)
+    glob_rev = identite_globale(g_rev.aligned_x, g_rev.aligned_y)
+    assert cov == pytest.approx(cov_rev, abs=1e-12)
+    assert glob == pytest.approx(glob_rev, abs=1e-12)
+
+
+@pytest.mark.parametrize("x, y", _random_pairs())
+def test_identite_couverture_is_one_for_identical_sequences(x, y):
+    # Une sequence avec elle-meme -> couverture 1.0, globale 1.0
+    g = NW(x, x)
+    assert identite_couverture(g.aligned_x, g.aligned_y) == pytest.approx(1.0)
+    assert identite_globale(g.aligned_x, g.aligned_y) == pytest.approx(1.0)
