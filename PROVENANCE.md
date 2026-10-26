@@ -564,3 +564,30 @@ Les 42 575 séquences du corpus sont couvertes. Une séquence présente dans plu
 - **Empreintes SHA-256** :
   - `baseline_ngram_A7.csv` : `b1f23c74b623f1db5e804d48b9a497c025fe9fe759ff6f85f27f4e602529fe96`
   - `ecart_baselines.png` : `050dbc67fe066eb29b3c753275a2d80d8287bfe80b5a8a0dab9534ca2e5c5b69`
+
+
+## Variantes du clustering v0.2 (solidite du critere — tableau de revue)
+
+- **Date du calcul** : 26/10/2026 (nocturne) — execute dans la mission Sofiene
+  apres merge de la PR #21 ; commandes : `python -c
+  "from peplib.variantes_v02 import run; run()"` (candidats A6 recalcules
+  UNE fois puis reutilises pour toutes les conventions de gap).
+- **Resultats** (`results/week2/variantes_clusters_v02_t13.csv`) :
+
+  | critere | tau | (o,e) | familles | taille_max | singletons | frac_max |
+  |---|---|---|---|---|---|---|
+  | couverture | 0.90 | 11,1 | 20673 | 4541 | 17592 | 0.106659 |
+  | couverture | 0.90 | 10,1 | 20656 | 4544 | 17578 | 0.106729 |
+  | couverture | 0.90 | 8,2 | 20596 | 4616 | 17526 | 0.108420 |
+  | identite_globale | 0.90 | 11,1 | 26015 | 479 | 22558 | 0.011251 |
+
+- **Lecture** : le critere de couverture 0,90 est **robuste a la convention de
+  gap** (ecart max 77 familles sur 20 673 = 0,37 % ; taille max +75) ; la
+  mesure identite globale NW (alignement sur la longueur ENTIERE des deux
+  sequences) eclate les familles (26 015 familles, taille max 479,
+  22 558 singletons) : elle regroupe beaucoup moins, car elle exige la
+  ressemblance sur toute la longueur et ne capte pas les fusions par
+  fragment — temoin complementaire (mise en garde A5/§5, ancre 20/50).
+- **Variante differee** : couverture **0,70 sur le corpus entier** (K(m)
+  tombe a 1 pour m = 10 → dizaines de millions de SW ; reporte, le seuil
+  0,70 est mesure exactement par la courbe de fuite).
