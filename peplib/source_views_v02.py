@@ -1,5 +1,11 @@
 
-"""Génération des vues par source du corpus v0.2."""
+"""Génération des vues par source du corpus v0.2.
+
+Consommation : toute extraction destinée à la génération de séquences doit
+joindre `data/processed/toxin_flags_v02.csv` par `sequence` et traiter
+`toxicity_status = "unknown"` comme `"flagged"` (mode d'échec sûr, relecture
+PR #19, point W4).
+"""
 
 import re
 from pathlib import Path

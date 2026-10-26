@@ -3,6 +3,11 @@
 
 Ce contrôle recherche des annotations textuelles de toxicité.
 L'absence de signalement ne constitue PAS une preuve de sécurité.
+
+Consommation : tout consommateur du corpus génératif v0.2 (splits A6,
+génération) doit joindre la sortie par `sequence` et traiter
+`toxicity_status = "unknown"` comme `"flagged"` — mode d'échec sûr
+(relecture PR #19, point W4).
 """
 
 from pathlib import Path
