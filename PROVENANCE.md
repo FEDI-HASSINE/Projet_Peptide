@@ -500,12 +500,25 @@ Les 42 575 séquences du corpus sont couvertes. Une séquence présente dans plu
   - contrôle aléatoire : F(0,90) = 0,557995, F(0,70) = 0,699761 —
     le contrôle fuit, comme attendu.
   - F(0,70) du split par familles mesuré sur le stock tau = 0,90 :
-    0,333174 — **borne inférieure** ; la passe exacte tau = 0,70
-    (6 710 520 candidats croisés, ~2 h SW) est lancée et mettra à jour
-    `results/week2/fuite_fractions.csv` + `courbe_fuite.png`.
+    0,333174 — **borne inférieure** ; remplacé ci-dessous par la mesure
+    exacte.
+- **Passe exacte tau = 0,70 (résultats du split par familles)** :
+  - candidats croisés évalués : 6 710 520 (split par familles),
+    7 808 555 (contrôle aléatoire, partie en cours de calcul à l'écriture
+    de cette section — les CSV finaux suivent dans un commit séparé) ;
+  - **split par familles : F(0,90) = 0,000000 exact (récupéré avec le
+    catalogue élargi) ET F(0,70) = 0,6071599** (0,607 = densité de cousins
+    à ≥ 70 %/70 %, normalement élevée dans un corpus AMP ; le critère de
+    fuite reste le seuil (0,90 ; 0,90), qui donne zéro) ;
+  - contrôle aléatoire : F(0,90) = 0,557995, F(0,70) final ≈ 0,70 attendu
+    (il fuit par construction).
 - **Sorties** : `results/week2/fuite.csv` (détail par séquence),
   `results/week2/fuite_fractions.csv` (F par split),
-  `results/week2/courbe_fuite.png`.
+  `results/week2/courbe_fuite.png`. Le journal d'exécution complet est
+  conservé HORS DÉPÔT (règle `*.log` de `.gitignore`) : le chiffre témoin
+  « Paires évaluées : 6 710 520 » du journal est cité intégralement
+  ci-dessus ; les CSV finaux (y compris le contrôle aléatoire, partie en
+  cours à l'écriture de cette section) suivent dans un commit séparé.
 ## A9 : mesure d'invariants sur paires reelles — results/align_invariants_a9.csv (PR #20)
 
 - **Fichier** : `results/align_invariants_a9.csv` (500 lignes de donnees, entete
@@ -564,3 +577,30 @@ Les 42 575 séquences du corpus sont couvertes. Une séquence présente dans plu
 - **Empreintes SHA-256** :
   - `baseline_ngram_A7.csv` : `b1f23c74b623f1db5e804d48b9a497c025fe9fe759ff6f85f27f4e602529fe96`
   - `ecart_baselines.png` : `050dbc67fe066eb29b3c753275a2d80d8287bfe80b5a8a0dab9534ca2e5c5b69`
+
+
+## Variantes du clustering v0.2 (solidite du critere — tableau de revue)
+
+- **Date du calcul** : 26/10/2026 (nocturne) — execute dans la mission Sofiene
+  apres merge de la PR #21 ; commandes : `python -c
+  "from peplib.variantes_v02 import run; run()"` (candidats A6 recalcules
+  UNE fois puis reutilises pour toutes les conventions de gap).
+- **Resultats** (`results/week2/variantes_clusters_v02_t13.csv`) :
+
+  | critere | tau | (o,e) | familles | taille_max | singletons | frac_max |
+  |---|---|---|---|---|---|---|
+  | couverture | 0.90 | 11,1 | 20673 | 4541 | 17592 | 0.106659 |
+  | couverture | 0.90 | 10,1 | 20656 | 4544 | 17578 | 0.106729 |
+  | couverture | 0.90 | 8,2 | 20596 | 4616 | 17526 | 0.108420 |
+  | identite_globale | 0.90 | 11,1 | 26015 | 479 | 22558 | 0.011251 |
+
+- **Lecture** : le critere de couverture 0,90 est **robuste a la convention de
+  gap** (ecart max 77 familles sur 20 673 = 0,37 % ; taille max +75) ; la
+  mesure identite globale NW (alignement sur la longueur ENTIERE des deux
+  sequences) eclate les familles (26 015 familles, taille max 479,
+  22 558 singletons) : elle regroupe beaucoup moins, car elle exige la
+  ressemblance sur toute la longueur et ne capte pas les fusions par
+  fragment — temoin complementaire (mise en garde A5/§5, ancre 20/50).
+- **Variante differee** : couverture **0,70 sur le corpus entier** (K(m)
+  tombe a 1 pour m = 10 → dizaines de millions de SW ; reporte, le seuil
+  0,70 est mesure exactement par la courbe de fuite).

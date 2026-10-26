@@ -1,0 +1,5 @@
+critere,tau,gap,nb_familles,taille_max,singletons,fraction_plus_grande
+couverture,0.9,"11,1",20673,4541,17592,0.106659
+couverture,0.9,"10,1",20656,4544,17578,0.106729
+couverture,0.9,"8,2",20596,4616,17526,0.10842
+identite_globale,0.9,"11,1",26015,479,22558,0.011251
