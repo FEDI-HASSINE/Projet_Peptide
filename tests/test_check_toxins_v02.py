@@ -99,3 +99,29 @@ def test_missing_columns_rejected(files):
 
     with pytest.raises(ValueError, match="Colonnes manquantes"):
         check_toxins_v02(corpus_path, uniprot_path, output_path)
+
+
+def test_venom_annotation_is_flagged(tmp_path):
+    """Relecture PR #19 (B2) : les annotations de venin doivent être flaguees."""
+    corpus = pd.DataFrame({
+        "sequence": ["AAAAAAAAAA"],
+        "sources": ["UniProt"],
+        "ids": ["U1"],
+    })
+    corpus_path = tmp_path / "corpus.csv"
+    corpus.to_csv(corpus_path, index=False)
+
+    uniprot = pd.DataFrame({
+        "Entry": ["U1"],
+        "Sequence": ["AAAAAAAAAA"],
+        "Protein names": ["Cysteine-rich venom protein"],
+        "Keywords": [""],
+    })
+    uniprot_path = tmp_path / "uniprot.tsv"
+    uniprot.to_csv(uniprot_path, sep="\t", index=False)
+
+    result = check_toxins_v02(corpus_path, uniprot_path, tmp_path / "flags.csv")
+
+    row = result.set_index("sequence").loc["AAAAAAAAAA"]
+    assert bool(row["is_toxin_annotation"])
+    assert row["toxicity_status"] == "flagged"

@@ -43,7 +43,7 @@ celles des fichiers tels qu'ils sont versionnés (fins de ligne LF).
 - **Version de la base** : UniProt Release 2026 (API REST)
 - **Conditions d'usage / licence** : Creative Commons Attribution (CC BY 4.0) — UniProt Terms of Use (consulté le 17/10/2026 ; usage académique et redistribution autorisés avec citation).
 - **Nombre de lignes brutes** : 12 424 (12 423 séquences + 1 ligne d'en-tête)
-- **Empreinte SHA-256 du fichier brut** : `f1c2e6d4a63414e80e241faf127cd935fb8011e1b964f27bd75444b2b97a1a9b`
+- **Empreinte SHA-256 du fichier brut** : `397959390c4ca2e6f55c5356e281f849398de0461328082f7549e2e1ad42f285`
 - **Fichier brut sauvegardé sous** : `data/raw/uniprot_reviewed_20261017.tsv`
 - **Téléchargement manuel ?** : Non (module `python -m peplib.download_uniprot` avec pagination via en-tête `Link`).
 - **Notes** : peptides de 10 à 50 résidus, uniquement entrées reviewed.
@@ -353,18 +353,18 @@ Les 42 575 séquences du corpus sont couvertes. Une séquence présente dans plu
 - **Entrée** : `data/processed/corpus_v0.2.csv`
 - **Annotations utilisées** : `data/raw/uniprot_reviewed_20261017.tsv`
 - **Sortie** : `data/processed/toxin_flags_v02.csv`
-- **Méthode** : jointure par séquence exacte avec UniProt et recherche insensible à la casse de `Toxin|Conotoxin` dans `Protein names` et `Keywords`. Les annotations positives sont agrégées par séquence.
+- **Méthode** : jointure par séquence exacte avec UniProt et recherche insensible à la casse de `Toxin|Conotoxin|Venom|Toxic` dans `Protein names` et `Keywords`. Le motif est volontairement sur-inclusif (une description « non-toxic » est aussi signalée) : le mode d'échec est sûr. Les annotations positives sont agrégées par séquence. Correction relecture PR #19 (B2) : « Venom » et « Toxic » ajoutés — 50 séquences du corpus portant des annotations de venin/toxicité étaient précédemment `not_flagged_by_uniprot`.
 
 ### Résultats
 
 | Statut | Nombre |
 |---|---:|
 | Séquences totales | 42 575 |
-| Signalées (`flagged`) | 1 736 |
-| Non signalées par UniProt (`not_flagged_by_uniprot`) | 7 175 |
+| Signalées (`flagged`) | 1 786 |
+| Non signalées par UniProt (`not_flagged_by_uniprot`) | 7 125 |
 | Sans annotation UniProt (`unknown`) | 33 664 |
 
-**Invariant** : 1 736 + 7 175 + 33 664 = 42 575.
+**Invariant** : 1 786 + 7 125 + 33 664 = 42 575.
 
 ### Limites
 
@@ -376,7 +376,9 @@ Les 42 575 séquences du corpus sont couvertes. Une séquence présente dans plu
 
 ### Reproductibilité
 
-- **SHA-256 de `toxin_flags_v02.csv`** : `f1c2e6d4a63414e80e241faf127cd935fb8011e1b964f27bd75444b2b97a1a9b`
-- **Tests spécifiques** : 6 réussis dans `tests/test_check_toxins_v02.py`.
-- **Suite complète** : 364 tests réussis.
+- **SHA-256 de `toxin_flags_v02.csv`** : `171f150b7a41871c2d10b762756d8cf7ed1aae4fbbd69981557ec6056180d314` (fichier LF, sans BOM ;
+  `data/processed/*.csv` marqué `-text` dans `.gitattributes`).
+- **Tests spécifiques** : 11 réussis dans `tests/test_check_toxins_v02.py` (dont « Venom peptide » flague)
+  ; le motif élargi est verrouillé par 3 tests ajoutés dans `tests/test_biosafety.py`.
+- **Suite complète** : 365 tests réussis (Python 3.14 et 3.11).
 - **Restriction** : ce contrôle ne constitue pas une validation de sécurité pour un usage thérapeutique.
