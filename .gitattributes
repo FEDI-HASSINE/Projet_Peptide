@@ -4,3 +4,5 @@
 data/raw/*.tsv -text
 data/processed/*.json -text
 data/processed/*.csv -text
+results/*.csv -text
+results/week2/*.csv -text
