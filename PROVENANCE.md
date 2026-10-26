@@ -385,3 +385,124 @@ Les 42 575 séquences du corpus sont couvertes. Une séquence présente dans plu
 - **Suite complète** : 369 tests réussis (Python 3.14 et 3.11).
 - **Restriction** : ce contrôle ne constitue pas une validation de sécurité pour un usage thérapeutique.
 - **Clause de consommation** : tout consommateur du corpus génératif v0.2 (splits A6, génération) doit joindre `toxin_flags_v02.csv` par `sequence` et traiter `unknown` comme `flagged` (mode d'échec sûr).
+
+
+## Clusters v0.2 au critère de couverture 0,90 (A5, Semaine 2)
+
+- **Date du calcul** : 26/10/2026
+- **Commande** : `python -c "from peplib.cluster_v02 import run; run()"`
+- **Entrée** : `data/processed/corpus_v0.2.csv` (42 575 séquences uniques,
+  triées pour la numérotation).
+- **Méthode** : composantes connexes (union-find, `peplib/cluster.py`) du
+  graphe « il existe un alignement local SW (o = 11, e = 1, BLOSUM62) avec
+  identité ≥ 0,90 ET couverture ≥ 0,90 ». Préfiltre multiset borné
+  (occurrences intactes ≥ ⌊0,63·m − 3⌋, preuve écrite dans
+  `Docs/A6_preuve_borne_couverture.md` ; la formule `max_distance` de la PR
+  #16 n'est PAS réutilisée pour la couverture). Nombre de 3-mers intact
+  exigé dépend de m = min(|a|, |b|) ; aucun epsilon ; comparaison au seuil
+  exacte car le pas des ratios (dénominateurs ≤ 200) écrase l'erreur
+  flottante (docstring `peplib/cluster_v02.py`).
+- **Comptes mesurés** : 116 206 731 couples partageant un 3-mer →
+  1 061 432 candidats après coupure sonore → 1 061 432 alignements SW →
+  21 902 fusions. **T13 : 20 673 familles, taille max 4 541
+  (10,6659 % du corpus), 17 592 singletons.**
+- **Sorties** : `data/processed/clusters_v02_90.csv` (colonnes
+  `sequence, sequence_id, cluster_id, sources`, LF sans BOM) ;
+  `results/week2/clusters_v01_t13.csv` renommé `results/week2/clusters_v02_t13.csv` ;
+  figure `results/week2/cluster_sizes_v02.png`.
+- **Écart assumé v0.1 → v0.2** : la colonne `source` (atome unique) devient
+  `sources` (fusion des atomes, séparateur `+`) : le corpus v0.2 est
+  multi-sources ; le contrat de colonnes est identique par ailleurs.
+- **Variante demandée non verrouillée** (seuil 0,70, identité globale,
+  (o,e) alternatifs) : voir PR — budget de calcul arbitré le 26/10.
+- **Empreintes SHA-256** :
+  - `clusters_v02_90.csv` : `e9de2eb5f92fccb40d71b606b73280ade3f5a1461d88610301077bf5af3eed1f`
+  - `clusters_v02_t13.csv` : `209ffc8d9ae5608e2e446ad47865140224c16b435ca01e0b9deeb7cb8fd57d7e`
+- **Verrou de test** : `tests/test_artefacts_clusters_v02.py` (5 tests).
+
+
+## Représentants par famille (T42, Semaine 2)
+
+- **Date du calcul** : 26/10/2026
+- **Commande** : `python -c "from peplib.cluster_v02 import representants; representants()"`
+- **Entrée** : `data/processed/clusters_v02_90.csv` (artefact ci-dessus).
+- **Critère du représentant (écrit, pas improvisé)** : la séquence la plus
+  longue de la famille ; à égalité, l'ordre alphabétique croissant.
+- **Sources** : fusion des atomes de TOUS les membres de la famille
+  (dédoublonnés, ordre canonique UniProt < APD3 < AMPChallenge,
+  séparateur `+`).
+- **Comptes mesurés** : 20 673 lignes (1 par famille), 20 673 séquences
+  uniques, somme des `taille_famille` = 42 575 (couverture complète du
+  corpus). Colonnes : `sequence, sequence_id, cluster_id, sources,
+  taille_famille`.
+- **Empreinte SHA-256** :
+  `931d8d7710183bd222630f7063861669baa69a4facb1729340c2b7db80998018`
+
+
+## Splits v0.2 — 90/5/5 par familles et contrôle aléatoire (T39/A6, Semaine 2)
+
+- **Date du calcul** : 26/10/2026
+- **Commande** : `python -c "from peplib.splits import run; run()"`
+- **Entrées** : `clusters_v02_90.csv` + `corpus_v0.2.csv` +
+  `toxin_flags_v02.csv` (jointure par `sequence` ;
+  `toxicity_status` suit la clause W4 de la PR #19 : `unknown` traité
+  comme `flagged` pour tout usage génératif ; **0 séquence du corpus v0.2
+  absente du TSV de toxines — la limite G4 de 110 UniProt ne touche pas
+  les sorties de split ; elle est documentée dans la section corpus**).
+- **Méthode** : affectation de familles ENTIÈRES (aucune à cheval),
+  familles > 1 % du corpus systématiquement en train (la plus grande,
+  4 541 > 425,75, y est), au moindre coût : dépassement de taille et
+  dépassement par atome de source au carré (stratification par source,
+  mixtures mesurées ci-dessous) ; tolérance ±0,5 pt par partie ; seed 42.
+- **Comptes mesurés** (cible 38 317,5 / 2 128,75 / 2 128,75 ± 212,9) :
+  train 38 336 (+18,5) ; val 2 095 (−33,75) ; test 2 144 (+15,25).
+  20 665 familles mobilisées ; chevauchement de familles entre parts :
+  **0 / 0 / 0**.
+- **Mixtures par atome mesurées** (global : AMPChallenge 33 974,
+  UniProt 9 021, APD3 2 796) :
+  - train : AMPChallenge 30 996, UniProt 8 118, APD3 2 516 ;
+  - val : 1 743 / 459 / 141 (attendu ≈ 1 699 / 451 / 140) ;
+  - test : 1 735 / 444 / 139.
+- **Split aléatoire de contrôle** : `data/splits_control/`, mêmes tailles
+  exactes, seed 42, mêmes colonnes, `cluster_id` conservé (il traverse les
+  parts par construction).
+- **Fraction par source des statuts toxines (train)** : unknown 29 517,
+  not_flagged_by_uniprot 7 017, flagged 1 785.
+- **Empreintes SHA-256** (recouvrées du manifeste `splits_manifest.json`,
+  SHA complet `670a896e625d65932a3f2ea7bdc56e503ac222272b8eceb2a2cff4b921b083cd`) :
+  - `data/splits/train_v02.csv` : `f9016bc038ed473870e76e4a849962813ef010ac3079c31e227309aa4349e736`
+  - `data/splits/val_v02.csv` : `f0a17569bf62be16ab931a1f8b47f8c62baad27f509bb62e816aad59f7dbb3a5`
+  - `data/splits/test_v02.csv` : `b3c82a07673ab2ab534666103405186da5b1f4217693acf5f811afeb53e62cc5`
+- **Verrou anti-dérive** : `tests/test_splits.py::test_run_sur_artefacts_synthetiques`
+  (toy) + lecture du manifeste dans la PR ; `data/splits/*.csv` et
+  `data/splits_control/*.csv` marqués `-text` dans `.gitattributes`.
+
+
+## Courbe de fuite — val contre train (A6/D3, Semaine 2)
+
+- **Date du calcul** : 26/10/2026
+- **Commande** : `python -c "from peplib.fuite import run; run(tau_candidats=<t>)"` (t = 0,90 puis 0,70)
+- **Méthode** : pour chaque séquence de val, meilleure paire (identité ,
+  couverture) contre tout train, parmi les candidats du préfiltre multiset
+  borné (A6) évalués uniquement en croisement val -> train ; SW complet
+  pour chaque candidat retenu. F(θ) = proportion des séquences de val dont
+  LA MÊME meilleure paire atteint identité ≥ θ ET couverture ≥ θ (le min
+  de la meilleure paire, jamais un mélange de deux paires — fixé par un
+  test). Un seul passage à tau = 0,70 couvre exactement F(0,90) ET F(0,70)
+  (bornes K(m) croissantes en tau).
+- **Pas de true biologique : les statuts toxines accompagnent les sorties,
+  aucune décision d'exclusion n'est prise ici (§6 ouvert).**
+- **Comptes mesurés (passe tau = 0,90)** : candidats val-train 17 916
+  (split par familles) contre 95 816 (contrôle aléatoire) — le préfiltre
+  mesure lui-même la séparation des familles. Résultats exacts :
+  - split par familles : **F(0,90) = 0,000000** (0 val / 2 095 ;
+    étanchéité vérifiée par la courbe, au-delà du test de familles) ;
+  - contrôle aléatoire : F(0,90) = 0,557995, F(0,70) = 0,699761 —
+    le contrôle fuit, comme attendu.
+  - F(0,70) du split par familles mesuré sur le stock tau = 0,90 :
+    0,333174 — **borne inférieure** ; la passe exacte tau = 0,70
+    (6 710 520 candidats croisés, ~2 h SW) est lancée et mettra à jour
+    `results/week2/fuite_fractions.csv` + `courbe_fuite.png`.
+- **Sorties** : `results/week2/fuite.csv` (détail par séquence),
+  `results/week2/fuite_fractions.csv` (F par split),
+  `results/week2/courbe_fuite.png`.
