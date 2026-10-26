@@ -229,3 +229,55 @@ def run(
 
     print(f"CSV : {output_path} | Figure : {figure_path}")
     return resultat
+
+
+def representants(
+    clusters_path="data/processed/clusters_v02_90.csv",
+    output_path="data/processed/representants_v02.csv",
+    separateur="+",
+):
+    """T42 : un représentant par famille + mapping famille -> sources.
+
+    Critère du représentant (écrit, pas improvisé) : la longueur maximale ;
+    à égalité, l'ordre alphabétique croissant de la séquence. Les sources
+    fusionnent les ATOMES de tous les membres de la famille (dédoublonnés,
+    séparés par `separateur`, ordre canonique UniProt < APD3 < AMPChallenge).
+
+    Colonnes de sortie : `sequence, sequence_id, cluster_id, sources,
+    taille_famille` (une ligne par famille) — consommables pour éviter de
+    générer deux peptides de la même famille.
+    """
+    clusters = pd.read_csv(clusters_path, dtype=str)
+    if not {"sequence", "sequence_id", "cluster_id", "sources"}.issubset(
+        clusters.columns
+    ):
+        raise ValueError("Colonnes manquantes dans l'artefact de clusters")
+
+    ordre_atomes = {"UniProt": 0, "APD3": 1, "AMPChallenge": 2}
+
+    lignes = []
+    for cid, groupe in clusters.groupby("cluster_id"):
+        atomes = set()
+        for chaine in groupe["sources"]:
+            atomes.update(chaine.split(separateur))
+        atomes_tries = sorted(
+            atomes, key=lambda a: ordre_atomes.get(a, 99)
+        )
+        meilleur = sorted(
+            groupe.itertuples(index=False),
+            key=lambda t: (-len(t.sequence), t.sequence),
+        )[0]
+        lignes.append(
+            {
+                "sequence": meilleur.sequence,
+                "sequence_id": meilleur.sequence_id,
+                "cluster_id": cid,
+                "sources": separateur.join(atomes_tries),
+                "taille_famille": len(groupe),
+            }
+        )
+
+    resultat = pd.DataFrame(lignes).sort_values("cluster_id").reset_index(drop=True)
+    resultat.to_csv(output_path, index=False, lineterminator="\n")
+    print(f"Représentants : {len(resultat)} familles -> {output_path}")
+    return resultat

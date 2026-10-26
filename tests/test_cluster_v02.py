@@ -9,6 +9,7 @@ from peplib.cluster_v02 import (
     candidats_par_couverture,
     borne_intacts,
     cluster_v02,
+    representants,
     tableau_t13,
 )
 from peplib.identite import identite_couverture
@@ -101,3 +102,33 @@ def test_criterer_couverture_seuil_0_9_exactement():
     assert identite == pytest.approx(0.9)
     etiquettes = cluster_v02([a, b])
     assert etiquettes[0] == etiquettes[1]
+
+
+def test_representants_toy(tmp_path):
+    """T42 : un representant par famille, critere longueur puis alphabetique."""
+    import pandas as pd
+
+    clusters = pd.DataFrame(
+        {
+            "sequence": ["BBBBBB", "AAAAAA", "CC", "DD"],
+            "sequence_id": ["i2", "i1", "i3", "i4"],
+            "cluster_id": ["0", "0", "1", "5"],
+            "sources": ["APD3+UniProt", "APD3", "UniProt", "AMPChallenge+UniProt"],
+        }
+    )
+    chemin = tmp_path / "clusters.csv"
+    clusters.to_csv(chemin, index=False)
+
+    reps = representants(str(chemin), str(tmp_path / "representants.csv"))
+
+    assert len(reps) == 3                    # une ligne par famille
+    assert set(reps["cluster_id"]) == {"0", "1", "5"}   # toutes couvertes
+    fam0 = reps[reps["cluster_id"] == "0"].iloc[0]
+    assert fam0["sequence"] == "AAAAAA"      # longueur egale -> alphabetique
+    assert fam0["sequence_id"] == "i1"
+    assert fam0["sources"] == "UniProt+APD3" # atomes fusionnes, ordre canonique
+    fam5 = reps[reps["cluster_id"] == "5"].iloc[0]
+    assert fam5["sources"] == "UniProt+AMPChallenge"
+    assert int(reps.loc[reps["cluster_id"] == "0", "taille_famille"].iloc[0]) == 2
+    # unicite : un representant jamais deux fois
+    assert reps["sequence"].is_unique
