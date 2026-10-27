@@ -2,7 +2,12 @@
 
 import pandas as pd
 
-from peplib.fuite import compare_splits, fractions_F, meilleures_couvertures
+from peplib.fuite import (
+    _ecritures,
+    compare_splits,
+    fractions_F,
+    meilleures_couvertures,
+)
 
 FRAGMENT = "KTIDWREEKGVVDAGYSQLC"
 PEPTIDE_50 = "ADPQSIRNLDEVWAK" + FRAGMENT + "MHTFLKGQESRVDCP"
@@ -69,6 +74,48 @@ def test_best_min_invariant_vrai_jeu():
     assert (df2["best_min"] == df2["best_identite"].combine(
         df2["best_couverture"], min
     )).all()
+
+
+def test_ecritures_fractions_supp_ordonnees(tmp_path):
+    """Reprise de calcul : les fractions injectées fusionnent ET l'ordre
+    du tableau final est stable (clusters d'abord, contrôle ensuite)."""
+    detail = pd.DataFrame(
+        {
+            "split": ["controle"] * 3,
+            "sequence": ["AECDE", "ADEEC", "AAEEE"],
+            # best_min = min(identite, couverture) DE LA MÊME paire
+            "best_identite": [1.0, 0.8, 0.95],
+            "best_couverture": [0.95, 0.9, 0.95],
+            "best_min": [0.95, 0.8, 0.95],
+        }
+    )
+    sortie = tmp_path / "fuite.csv"
+    sup = [
+        {"split": "clusters", "fraction": "F_70", "valeur": 0.6071599045346062},
+        {"split": "clusters", "fraction": "F_90", "valeur": 0.0},
+    ]
+    fractions = _ecritures(
+        detail,
+        courbes={"controle": detail["best_min"].tolist()},
+        sortie_csv=str(sortie),
+        figure=str(tmp_path / "courbe.png"),
+        fractions_supp=sup,
+    )
+    # lignes ordonnées clusters d'abord, contrôle ensuite
+    assert list(fractions["split"][:2].unique()) == ["clusters"]
+    assert list(fractions["split"][2:].unique()) == ["controle"]
+    assert fractions.equals(
+        fractions.sort_values(["split", "fraction"]).reset_index(drop=True)
+    )
+    # controle : best_min = (0,95 ; 0,8 ; 0,95) -> F_70 = 3/3 ; F_90 = 2/3
+    ligne70 = fractions[
+        (fractions["split"] == "controle") & (fractions["fraction"] == "F_70")
+    ]["valeur"].iloc[0]
+    ligne90 = fractions[
+        (fractions["split"] == "controle") & (fractions["fraction"] == "F_90")
+    ]["valeur"].iloc[0]
+    assert abs(ligne70 - 1.0) < 1e-12
+    assert abs(ligne90 - 2 / 3) < 1e-12
 
 
 def test_compare_splits_toy(tmp_path):

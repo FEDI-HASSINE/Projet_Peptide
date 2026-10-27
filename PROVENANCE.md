@@ -502,23 +502,33 @@ Les 42 575 séquences du corpus sont couvertes. Une séquence présente dans plu
   - F(0,70) du split par familles mesuré sur le stock tau = 0,90 :
     0,333174 — **borne inférieure** ; remplacé ci-dessous par la mesure
     exacte.
-- **Passe exacte tau = 0,70 (résultats du split par familles)** :
+- **Passe exacte tau = 0,70 (résultats complets, les deux splits)** :
   - candidats croisés évalués : 6 710 520 (split par familles),
-    7 808 555 (contrôle aléatoire, partie en cours de calcul à l'écriture
-    de cette section — les CSV finaux suivent dans un commit séparé) ;
+    7 808 555 (contrôle aléatoire, exécution achevée le 27/10/2026) ;
   - **split par familles : F(0,90) = 0,000000 exact (récupéré avec le
     catalogue élargi) ET F(0,70) = 0,6071599** (0,607 = densité de cousins
     à ≥ 70 %/70 %, normalement élevée dans un corpus AMP ; le critère de
     fuite reste le seuil (0,90 ; 0,90), qui donne zéro) ;
-  - contrôle aléatoire : F(0,90) = 0,557995, F(0,70) final ≈ 0,70 attendu
-    (il fuit par construction).
-- **Sorties** : `results/week2/fuite.csv` (détail par séquence),
-  `results/week2/fuite_fractions.csv` (F par split),
-  `results/week2/courbe_fuite.png`. Le journal d'exécution complet est
-  conservé HORS DÉPÔT (règle `*.log` de `.gitignore`) : le chiffre témoin
-  « Paires évaluées : 6 710 520 » du journal est cité intégralement
-  ci-dessus ; les CSV finaux (y compris le contrôle aléatoire, partie en
-  cours à l'écriture de cette section) suivent dans un commit séparé.
+  - **contrôle aléatoire (passe exacte achevée)** : F(0,90) = 0,5579952
+    — identique au témoin de la passe tau = 0,90 (0,557995), cohérence
+    confirmée — et **F(0,70) = 0,8252983 exact** (remplace la borne
+    inférieure 0,699761). Verbatim du journal d'exécution :
+    « Paires évaluées : 7800000/7808555 » puis
+    « Split controle : {'F_70': 0.8252983293556085,
+    'F_90': 0.5579952267303102} ». Le contrôle fuit, comme attendu ;
+    la reprise de calcul n'a réexécuté QUE la partie contrôle (les faits
+    du split familles, terminé le 26/10, sont réinjectés via
+    ``FAITS_JOURNAL_CLUSTERS`` dans `peplib/fuite.py`).
+- **Sorties** : `results/week2/fuite.csv` (détail par séquence, split
+  contrôle de la passe exacte — le détail du split familles est couvert
+  par sa passe complète du 26/10 consignée ci-dessus),
+  `results/week2/fuite_fractions.csv` (4 lignes : F(0,70) et F(0,90)
+  de chaque split), `results/week2/courbe_fuite.png`. Le journal
+  d'exécution complet est conservé HORS DÉPÔT (règle `*.log` de
+  `.gitignore`) ; les chiffres-témoins des deux journaux sont cités
+  verbatim ci-dessus (« Paires évaluées : 6 710 520 » pour la partie
+  familles, « Split controle : {'F_70': 0.8252983293556085,
+  'F_90': 0.5579952267303102} » pour la partie contrôle achevée).
 ## A9 : mesure d'invariants sur paires reelles — results/align_invariants_a9.csv (PR #20)
 
 - **Fichier** : `results/align_invariants_a9.csv` (500 lignes de donnees, entete
