@@ -1,0 +1,30 @@
+model:
+  type: transformer
+  vocab_size: 23
+  d_model: 128
+  n_heads: 4
+  n_layers: 4
+  d_ff: 512
+  dropout: 0.1
+
+train:
+  seed: 42
+  batch_size: 128
+  max_epochs: 30
+  optimizer: adamw
+  lr: 0.001
+  weight_decay: 0.01
+  grad_clip: 1.0
+  early_stopping:
+    metric: val_ppl
+    patience: 3
+
+data:
+  train: data/splits/train_v02.csv
+  val: data/splits/val_v02.csv
+  max_len: 50
+
+sampling_grid:
+  temperature: [0.8, 1.0, 1.2]
+  top_k: [0, 10]
+  top_p: [1.0, 0.9]

@@ -221,3 +221,62 @@ def load_splits(
         )
 
     return loaders
+
+def collate_peptides(batch):
+    """Padding dynamique, masque et longueurs pour un batch."""
+    from torch.nn.utils.rnn import pad_sequence
+
+    inputs = []
+    targets = []
+    lengths = []
+
+    for item in batch:
+        x = item["input_ids"]
+        y = item["labels"]
+
+        # Les labels PAD sont deja remplaces par -100.
+        length = int((y != LABEL_IGNORE_INDEX).sum().item())
+        inputs.append(x[:length])
+        targets.append(y[:length])
+        lengths.append(length)
+
+    input_ids = pad_sequence(
+        inputs, batch_first=True, padding_value=PAD_ID
+    )
+    labels = pad_sequence(
+        targets, batch_first=True, padding_value=LABEL_IGNORE_INDEX
+    )
+    lengths = torch.tensor(lengths, dtype=torch.long)
+    pad_mask = (
+        torch.arange(input_ids.shape[1]).unsqueeze(0)
+        < lengths.unsqueeze(1)
+    )
+
+    return {
+        "input_ids": input_ids,
+        "labels": labels,
+        "lengths": lengths,
+        "pad_mask": pad_mask,
+    }
+
+
+def make_loader_s3(
+    dataset,
+    batch_size=128,
+    shuffle=False,
+    seed=42,
+    num_workers=0,
+):
+    """Chargeur S3 reproductible avec padding dynamique."""
+    from torch.utils.data import DataLoader
+
+    generator = torch.Generator().manual_seed(seed)
+
+    return DataLoader(
+        dataset,
+        batch_size=batch_size,
+        shuffle=shuffle,
+        num_workers=num_workers,
+        generator=generator,
+        collate_fn=collate_peptides,
+    )
