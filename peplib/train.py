@@ -371,8 +371,8 @@ def train_model(
             first_epoch_time = elapsed
             device_note = "CPU (pas de CUDA détecté)"
             print(
-                f"\n[train] ⏱  Epoch 0 : {elapsed:.1f} s — {device_note}\n"
-                f"         → Décision : entraînement sur {device_note}"
+                f"\n[train] Epoch 0 : {elapsed:.1f} s -- {device_note}\n"
+                f"        Decision : entrainement sur {device_note}"
             )
 
         print(
@@ -409,16 +409,16 @@ def train_model(
             best_epoch    = epoch + 1
             no_improve    = 0
             _save_checkpoint(best_ckpt, model, optimizer, epoch, val_loss, val_pp, cfg, seed)
-            print(f"[train]   ✓ Nouveau best model sauvé (val_pp={val_pp:.2f})")
+            print(f"[train]   >> Nouveau best model sauve (val_pp={val_pp:.2f})")
         else:
             no_improve += 1
             if no_improve >= patience:
-                print(f"[train] Early stopping — {patience} epochs sans amélioration.")
+                print(f"[train] Early stopping - {patience} epochs sans amelioration.")
                 break
 
     best_val_pp = math.exp(min(best_val_loss, 20.0))
     print(
-        f"\n[train] ✅ Terminé : {model_name.upper()} seed={seed} | "
+        f"\n[train] DONE : {model_name.upper()} seed={seed} | "
         f"best epoch={best_epoch} | val_pp={best_val_pp:.2f}"
     )
 
