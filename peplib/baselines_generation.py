@@ -9,6 +9,11 @@ Baselines :
 - validation melangee
 
 Les modeles n-grammes sont ajustes uniquement sur le train.
+
+Correction B2 (PR #26) :
+- Longueur minimale : 10 AA.
+- Longueur maximale : 50 AA.
+- EOS interdit avant la generation de 10 AA.
 """
 
 import csv
@@ -94,20 +99,26 @@ def generate_ngram(
 ) -> list[str]:
     """Genere des peptides avec un unigramme ou bigramme ajuste.
 
-    EOS termine la generation. Pour garantir des peptides non vides,
-    EOS est interdit lors du premier tirage.
-
-    Si EOS n'apparait pas, la sequence est arretee a max_residues.
+    Regles de generation :
+    - Chaque peptide contient entre 10 et 50 AA.
+    - EOS termine la generation apres au moins 10 AA.
+    - EOS est interdit lors des 10 premiers tirages.
+    - Si EOS n'apparait pas, arret force a max_residues.
     """
 
     if model.order not in (1, 2):
-        raise ValueError("Seuls unigramme et bigramme sont supportes")
+        raise ValueError(
+            "Seuls unigramme et bigramme sont supportes"
+        )
 
     if n_sequences <= 0:
         raise ValueError("n_sequences doit etre positif")
 
-    if not 1 <= max_residues <= 50:
-        raise ValueError("max_residues doit etre entre 1 et 50")
+    # B2 : le maximum autorise ne peut pas etre inferieur a 10.
+    if not 10 <= max_residues <= 50:
+        raise ValueError(
+            "max_residues doit etre entre 10 et 50"
+        )
 
     generator = torch.Generator().manual_seed(seed)
     generated = []
@@ -117,6 +128,8 @@ def generate_ngram(
 
         for _step in range(max_residues):
 
+            # Unigramme : pas de contexte.
+            # Bigramme : dernier AA ou BOS au debut.
             if model.order == 1:
                 context = ()
             else:
@@ -129,14 +142,16 @@ def generate_ngram(
                 float("-inf"),
             )
 
+            # Probabilites des 20 AA et de EOS.
             for token in TARGETS:
                 logits[VOCAB[token]] = model.log_prob_target(
                     token,
                     context=context,
                 )
 
-            # Eviter de produire une sequence vide.
-            if not residues:
+            # CORRECTION B2 :
+            # EOS ne peut pas etre genere avant 10 AA.
+            if len(residues) < 10:
                 logits[EOS_ID] = float("-inf")
 
             token_id = sample_next_token(
@@ -147,9 +162,11 @@ def generate_ngram(
                 generator=generator,
             )
 
+            # EOS termine la generation.
             if token_id == EOS_ID:
                 break
 
+            # Sinon, ajouter l'acide amine genere.
             residues.append(ID_TO_TOKEN[token_id])
 
         generated.append("".join(residues))
@@ -166,15 +183,28 @@ def build_reference_baselines(
     """Construit les cinq references de T61."""
 
     if not train or not validation:
-        raise ValueError("Train et validation doivent etre non vides")
+        raise ValueError(
+            "Train et validation doivent etre non vides"
+        )
 
-    unigram = NgramModel(order=1, alpha=alpha).fit(train)
-    bigram = NgramModel(order=2, alpha=alpha).fit(train)
+    # Apprentissage uniquement sur le train.
+    unigram = NgramModel(
+        order=1,
+        alpha=alpha,
+    ).fit(train)
+
+    bigram = NgramModel(
+        order=2,
+        alpha=alpha,
+    ).fit(train)
 
     n = len(validation)
 
     return {
-        "random": random_baseline(validation, seed),
+        "random": random_baseline(
+            validation,
+            seed=seed,
+        ),
         "unigram": generate_ngram(
             unigram,
             n_sequences=n,
@@ -185,9 +215,11 @@ def build_reference_baselines(
             n_sequences=n,
             seed=seed,
         ),
-        "validation": validation_baseline(validation),
+        "validation": validation_baseline(
+            validation,
+        ),
         "shuffled_validation": shuffled_validation_baseline(
             validation,
-            seed,
+            seed=seed,
         ),
     }

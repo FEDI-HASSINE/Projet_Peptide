@@ -21,7 +21,8 @@ def test_identical_peptide():
 
 
 def test_substring_of_train():
-    """Un fragment inclus dans le train est tres proche localement."""
+    """Un fragment inclus dans le train est proche localement."""
+
     details = proximity_details(
         ["ACDE"],
         ["GGACDEGG"],
@@ -44,6 +45,7 @@ def test_proximity_summary():
 
 def test_short_peptides():
     """Les sequences plus courtes que 3 AA restent comparables."""
+
     details = proximity_details(
         ["AC"],
         ["AC"],
@@ -77,7 +79,7 @@ def test_invalid_threshold():
 
 
 def test_threshold_matches_exhaustive_on_small_corpus():
-    """Le prefiltre ne doit pas manquer les paires >= 90 %."""
+    """Le prefiltre doit retrouver les paires >= 90 %."""
 
     generated = [
         "ACDEFG",
@@ -99,7 +101,6 @@ def test_threshold_matches_exhaustive_on_small_corpus():
     )
 
     for i, seq_gen in enumerate(generated):
-        # Comparaison exhaustive : oracle de test.
         best_exhaustive = max(
             min(*identite_couverture(seq_gen, seq_train))
             for seq_train in train
@@ -108,3 +109,44 @@ def test_threshold_matches_exhaustive_on_small_corpus():
         assert bool(details.iloc[i]["near_train_90"]) == (
             best_exhaustive >= 0.90
         )
+
+
+def test_meilleures_paires_called_once(monkeypatch):
+    """B1 : le calcul SW ne doit etre lance qu'une seule fois."""
+
+    import peplib.metrics_proximity as proximity_module
+
+    original_function = proximity_module.meilleures_paires
+    call_count = 0
+
+    def counting_wrapper(generated, train, candidates):
+        nonlocal call_count
+        call_count += 1
+
+        return original_function(
+            generated,
+            train,
+            candidates,
+        )
+
+    monkeypatch.setattr(
+        proximity_module,
+        "meilleures_paires",
+        counting_wrapper,
+    )
+
+    # Plusieurs sequences dans le train :
+    # l'ancienne version appelait la fonction plusieurs fois.
+    details = proximity_module.proximity_details(
+        generated=["ACDEFG", "GGGGGG"],
+        train=[
+            "ACDEFG",
+            "CCCCCC",
+            "GGGGGG",
+            "WWWWWW",
+        ],
+        threshold=0.90,
+    )
+
+    assert len(details) == 2
+    assert call_count == 1

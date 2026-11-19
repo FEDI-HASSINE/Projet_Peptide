@@ -9,6 +9,8 @@ Reutilise les fonctions de la semaine 2 :
 Aucun acces au split de test.
 """
 
+import math
+
 import pandas as pd
 
 from peplib.constants import AA_LIST
@@ -43,23 +45,21 @@ def proximity_details(
     train: list[str],
     threshold: float = 0.90,
 ) -> pd.DataFrame:
-    """Calcule la meilleure proximite de chaque peptide avec le train.
+    """Calcule la meilleure proximite avec le train.
 
-    La proximite est mesuree par :
-        best_min = max_train(min(identite_SW, couverture_SW))
+    best_min = max_train(min(identite_SW, couverture_SW))
 
-    Attention :
-    le prefiltrage vise la detection des paires au seuil demande.
-    Les scores sous ce seuil peuvent etre sous-estimes.
+    Les scores en dessous du seuil peuvent etre sous-estimes
+    a cause du prefiltrage.
     """
 
     _validate_sequences(generated, "generated")
     _validate_sequences(train, "train")
 
-    if not 0 < threshold <= 1:
-        raise ValueError("threshold doit etre dans ]0, 1]")
+    if not math.isfinite(threshold) or not 0 < threshold <= 1:
+        raise ValueError("threshold doit etre fini et dans ]0, 1]")
 
-    # Recherche de candidats croises genere -> train.
+    # Etape 1 : recherche des candidats genere -> train.
     candidates = candidats_val_train(
         generated,
         train,
@@ -67,9 +67,8 @@ def proximity_details(
         k=3,
     )
 
-    # Pour les peptides plus courts que 3 residus,
-    # le filtre 3-mers n'est pas applicable.
-    # On compare donc ces paires exhaustivement.
+    # Etape 2 : gerer les sequences trop courtes
+    # pour le prefiltrage par 3-mers.
     for i, seq_gen in enumerate(generated):
         if len(seq_gen) < 3:
             candidates.update(
@@ -82,21 +81,20 @@ def proximity_details(
                 (i, j) for i in range(len(generated))
             )
 
-    # Fonction de l'equipe : calcul SW sur les paires retenues.
-        details = meilleures_paires(
+    # Etape 3 : UN SEUL calcul SW sur toutes les paires candidates.
+    # IMPORTANT : cette instruction est hors des deux boucles.
+    details = meilleures_paires(
         generated,
         train,
         candidates,
     ).copy()
 
-    # meilleures_paires fournit deja la colonne sequence.
-    # On evite donc de l'ajouter une deuxieme fois.
+    # meilleures_paires fournit normalement deja cette colonne.
     if "sequence" not in details.columns:
         details.insert(0, "sequence", generated)
 
-    details["near_train_90"] = (
-        details["best_min"] >= 0.90
-    )
+    # Etape 4 : identifier les peptides proches du train.
+    details["near_train_90"] = details["best_min"] >= 0.90
 
     details["near_train_threshold"] = (
         details["best_min"] >= threshold

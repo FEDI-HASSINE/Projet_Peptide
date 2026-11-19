@@ -85,7 +85,7 @@ def test_generate_ngram(order):
     )
 
     assert len(generated) == 10
-    assert all(1 <= len(s) <= 50 for s in generated)
+    assert all(10 <= len(s) <= 50 for s in generated)
     assert all(set(s).issubset(set(AA_LIST)) for s in generated)
 
 
@@ -132,3 +132,47 @@ def test_invalid_ngram_order():
 def test_empty_train():
     with pytest.raises(ValueError):
         build_reference_baselines([], VAL)
+
+
+@pytest.mark.parametrize("order", [1, 2])
+def test_ngram_minimum_length_10(order):
+    """B2 : tous les peptides generes ont au moins 10 AA."""
+
+    model = NgramModel(order=order, alpha=1.0).fit(TRAIN)
+
+    generated = generate_ngram(
+        model,
+        n_sequences=100,
+        seed=42,
+    )
+
+    assert len(generated) == 100
+    assert all(10 <= len(s) <= 50 for s in generated)
+
+
+@pytest.mark.parametrize("order", [1, 2])
+def test_ngram_minimum_max_residues(order):
+    """Un maximum de 10 doit produire des peptides de 10 AA."""
+
+    model = NgramModel(order=order, alpha=1.0).fit(TRAIN)
+
+    generated = generate_ngram(
+        model,
+        n_sequences=20,
+        seed=42,
+        max_residues=10,
+    )
+
+    assert len(generated) == 20
+    assert all(len(s) == 10 for s in generated)
+
+
+def test_ngram_rejects_max_length_below_10():
+    model = NgramModel(order=1, alpha=1.0).fit(TRAIN)
+
+    with pytest.raises(ValueError):
+        generate_ngram(
+            model,
+            n_sequences=5,
+            max_residues=9,
+        )

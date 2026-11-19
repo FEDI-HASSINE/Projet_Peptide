@@ -72,13 +72,16 @@ def main():
     print("\n=== TABLEAU COMPARATIF ===")
 
     columns = [
-        "baseline",
-        "n_generated",
-        "validity_rate",
-        "uniqueness_rate",
-        "length_mean",
-        "js_divergence",
-        "ks_length",
+    "baseline",
+    "n_generated",
+    "validity_rate",
+    "validity_rate_10_50",
+    "uniqueness_rate",
+    "length_min",
+    "length_mean",
+    "length_max",
+    "js_divergence",
+    "ks_length",
     ]
 
     print(results[columns].to_string(index=False))

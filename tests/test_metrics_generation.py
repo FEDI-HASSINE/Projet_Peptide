@@ -7,7 +7,9 @@ import pytest
 
 from peplib.metrics_generation import (
     is_valid_peptide,
+    is_valid_peptide_10_50,
     validity_rate,
+    validity_rate_10_50,
     uniqueness_rate,
     sequence_length_stats,
     amino_acid_distribution,
@@ -18,6 +20,7 @@ from peplib.metrics_generation import (
 
 
 def test_valid_peptide():
+    # Validite alphabet uniquement : une sequence courte est acceptee.
     assert is_valid_peptide("ACDEFG") is True
 
 
@@ -76,14 +79,18 @@ def test_ks_identical_lengths():
     generated = ["ACD", "GGGG", "WY"]
     reference = ["FFF", "AAAA", "CC"]
 
-    assert ks_length_statistic(generated, reference) == pytest.approx(0.0)
+    assert ks_length_statistic(
+        generated, reference
+    ) == pytest.approx(0.0)
 
 
 def test_ks_different_lengths():
     generated = ["AA", "CC"]
     reference = ["AAAAAA", "GGGGGG"]
 
-    assert ks_length_statistic(generated, reference) == pytest.approx(1.0)
+    assert ks_length_statistic(
+        generated, reference
+    ) == pytest.approx(1.0)
 
 
 def test_generation_metrics():
@@ -97,6 +104,10 @@ def test_generation_metrics():
     assert metrics["validity_rate"] == pytest.approx(0.75)
     assert metrics["uniqueness_rate"] == pytest.approx(0.75)
     assert metrics["length_mean"] == pytest.approx(4.0)
+
+    # Toutes les sequences sont trop courtes pour la regle 10-50.
+    assert metrics["n_valid_10_50"] == 0
+    assert metrics["validity_rate_10_50"] == pytest.approx(0.0)
 
     assert 0 <= metrics["js_divergence"] <= math.log(2)
     assert 0 <= metrics["ks_length"] <= 1
@@ -116,3 +127,62 @@ def test_no_valid_peptide():
 
     with pytest.raises(ValueError):
         amino_acid_distribution(["XXX"])
+
+
+# ---------------------------------------------------------
+# Nouveaux tests B2 : alphabet + longueur 10-50
+# ---------------------------------------------------------
+
+def test_validity_length_boundaries():
+    assert is_valid_peptide_10_50("A" * 10)
+    assert is_valid_peptide_10_50("A" * 50)
+
+    assert not is_valid_peptide_10_50("A" * 9)
+    assert not is_valid_peptide_10_50("A" * 51)
+
+
+def test_validity_10_50_rejects_invalid_alphabet():
+    assert not is_valid_peptide_10_50("ACDEFGHIKX")
+    assert not is_valid_peptide_10_50("acdefghikl")
+    assert not is_valid_peptide_10_50("")
+
+
+def test_validity_rate_10_50():
+    sequences = [
+        "ACDEFGHIKL",   # 10 AA : valide
+        "ACDEFG",       # 6 AA : trop court
+        "ACXEFGHIKL",   # 10 caracteres, mais X interdit
+    ]
+
+    assert validity_rate_10_50(sequences) == pytest.approx(1 / 3)
+
+
+def test_validity_rate_10_50_all_valid():
+    sequences = ["A" * 10, "C" * 30, "G" * 50]
+
+    assert validity_rate_10_50(sequences) == pytest.approx(1.0)
+
+
+def test_validity_rate_10_50_empty():
+    with pytest.raises(ValueError):
+        validity_rate_10_50([])
+
+
+def test_generation_metrics_reports_strict_validity():
+    generated = [
+        "A" * 10,
+        "C" * 9,
+        "G" * 50,
+        "X" * 12,
+    ]
+
+    reference = ["A" * 10, "G" * 50]
+
+    metrics = generation_metrics(generated, reference)
+
+    assert metrics["n_generated"] == 4
+    assert metrics["n_valid"] == 3
+    assert metrics["n_valid_10_50"] == 2
+
+    assert metrics["validity_rate"] == pytest.approx(0.75)
+    assert metrics["validity_rate_10_50"] == pytest.approx(0.50)
