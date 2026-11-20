@@ -1,30 +1,33 @@
 # configs/lstm_base.yaml — Configuration LSTM causal (Semaine 3 / T49)
-# Yassine : configs versionnées ; Youssef : modèle LSTM from scratch.
+# Schema imbriqué (validé par peplib/config.py)
 
-model: lstm
+model:
+  type: lstm
+  vocab_size: 23
+  d_embed: 128
+  d_hidden: 256
+  n_layers: 2
+  dropout: 0.2
+  tie_weights: false
 
-# --- Vocabulaire & séquences ---
-vocab_size: 23        # PAD=0, BOS=1, EOS=2, 20 AA (peplib.tokenizer)
-max_len: 52           # 50 résidus + BOS + EOS (convention semaine 2)
-pad_id: 0
-bos_id: 1
-eos_id: 2
+train:
+  seed: 42
+  batch_size: 128
+  max_epochs: 30
+  optimizer: adamw
+  lr: 0.001
+  weight_decay: 0.01
+  grad_clip: 1.0
+  early_stopping:
+    metric: val_ppl
+    patience: 3
 
-# --- Architecture ---
-embed_dim: 128
-hidden_dim: 256
-n_layers: 2
-dropout: 0.2
+data:
+  train: data/splits/train_v02.csv
+  val: data/splits/val_v02.csv
+  max_len: 50
 
-# --- Entraînement ---
-batch_size: 64
-lr: 0.001
-max_epochs: 30
-patience: 5           # early stopping sur val_loss (epochs sans amélioration)
-grad_clip: 1.0        # gradient clipping (norme L2)
-label_ignore_index: -100
-
-# --- Chemins ---
-splits_dir: data/processed/splits
-checkpoints_dir: checkpoints/lstm
-results_dir: results/week3
+sampling_grid:
+  temperature: [0.8, 1.0, 1.2]
+  top_k: [0, 10]
+  top_p: [1.0, 0.9]
