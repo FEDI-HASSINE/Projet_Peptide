@@ -264,7 +264,7 @@ def train_model(
     set_seed(seed)
 
     mtype  = _cfg(cfg, "model", "type", default="lstm").lower()
-    device = torch.device("cpu")
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
     # --- Splits verrouilles (aucune creation automatique) ---
     train_loader, val_loader = _make_loaders(cfg, seed)
@@ -272,7 +272,7 @@ def train_model(
     # --- Modele ---
     model  = _build_model(cfg).to(device)
     n_params = sum(p.numel() for p in model.parameters() if p.requires_grad)
-    print(f"\n[train] {mtype.upper()} | seed={seed} | params={n_params:,} | device=CPU")
+    print(f"\n[train] {mtype.upper()} | seed={seed} | params={n_params:,} | device={device.type.upper()}")
     print(f"[train] train={len(train_loader.dataset):,} | val={len(val_loader.dataset):,}")
 
     # --- Critere ---
@@ -332,7 +332,7 @@ def train_model(
 
         if epoch == start_epoch:
             first_epoch_time = elapsed
-            print(f"[train] Epoch 0 : {elapsed:.1f}s -- CPU (pas de CUDA)")
+            print(f"[train] Epoch 0 : {elapsed:.1f}s -- {device.type.upper()}")
 
         print(
             f"[train] Epoch {epoch+1:>3}/{max_epochs} | "
