@@ -22,14 +22,13 @@ train:
   early_stopping:
     metric: val_ppl
     patience: 5
+  checkpoints_dir: checkpoints/transformer
+  results_dir: results/week3
 
 data:
   train: data/splits/train_v02.csv
   val:   data/splits/val_v02.csv
   max_len: 50
-
-checkpoints_dir: checkpoints/transformer
-results_dir: results/week3
 
 sampling_grid:
   temperature: [0.8, 1.0, 1.2]

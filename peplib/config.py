@@ -10,6 +10,7 @@ MODEL_KEYS = {
 TRAIN_KEYS = {
     "seed", "batch_size", "max_epochs", "optimizer", "lr",
     "weight_decay", "grad_clip", "early_stopping",
+    "checkpoints_dir", "results_dir",
 }
 DATA_KEYS = {"train", "val", "max_len"}
 SAMPLING_KEYS = {"temperature", "top_k", "top_p"}
@@ -53,7 +54,14 @@ def load_config(path: str | Path) -> ExperimentConfig:
         raise ValueError(f"Type de modele inconnu: {model_type}")
 
     _check_keys("model", model, MODEL_KEYS[model_type])
-    _check_keys("train", raw["train"], TRAIN_KEYS)
+    # Validation train : cles requises + optionnelles (warmup_steps)
+    train_keys = raw["train"]
+    missing = TRAIN_KEYS - train_keys.keys()
+    if missing:
+        raise ValueError(f"train: cles manquantes={sorted(missing)}")
+    unknown = train_keys.keys() - (TRAIN_KEYS | {"warmup_steps"})
+    if unknown:
+        raise ValueError(f"train: cles inconnues={sorted(unknown)}")
     _check_keys("data", raw["data"], DATA_KEYS)
     _check_keys("sampling_grid", raw["sampling_grid"], SAMPLING_KEYS)
     _check_keys(
@@ -81,5 +89,9 @@ def load_config(path: str | Path) -> ExperimentConfig:
     if model_type == "transformer":
         if model["d_model"] % model["n_heads"] != 0:
             raise ValueError("d_model doit etre divisible par n_heads")
+        # warmup_steps est optionnel mais si present doit etre >= 0
+        ws = raw["train"].get("warmup_steps", 0)
+        if not isinstance(ws, int) or ws < 0:
+            raise ValueError("warmup_steps doit etre un entier >= 0")
 
     return ExperimentConfig(**raw)

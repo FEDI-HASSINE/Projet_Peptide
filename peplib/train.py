@@ -294,13 +294,13 @@ def train_model(
             lr_lambda=lambda s: _warmup_lambda(s, warmup_steps),
         )
 
-    # --- Chemins ---
-    ckpt_base = Path(_cfg(cfg, "checkpoints_dir", default=f"checkpoints/{mtype}"))
+    # --- Chemins (dans train.* pour compatibilite schema PR #24) ---
+    ckpt_base = Path(_cfg(cfg, "train", "checkpoints_dir", default=f"checkpoints/{mtype}"))
     ckpt_dir  = ckpt_base / f"seed_{seed}"
     ckpt_dir.mkdir(parents=True, exist_ok=True)
     best_ckpt = ckpt_dir / "best.pt"
 
-    results_dir = Path(_cfg(cfg, "results_dir", default="results/week3"))
+    results_dir = Path(_cfg(cfg, "train", "results_dir", default="results/week3"))
     runs_csv    = results_dir / "runs.csv"
 
     # --- Reprise ---
