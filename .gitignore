@@ -13,3 +13,6 @@ AGENTS.md
 /data/raw/challenge_antibacterial_20261022.fasta
 # Checkpoints : fichiers .pt lourds, non deposes sur le depot
 checkpoints/
+# Executables locaux pip/python (Windows)
+/pip
+/python
