@@ -1,6 +1,9 @@
+# configs/transformer_base.yaml — Transformer causal, semaine 3 (T55)
+# Schema imbrique (harmonise avec PR #24, Yassine)
+
 model:
   type: transformer
-  vocab_size: 23
+  vocab_size: 23        # PAD=0, BOS=1, EOS=2, 20 AA
   d_model: 128
   n_heads: 4
   n_layers: 4
@@ -15,14 +18,18 @@ train:
   lr: 0.001
   weight_decay: 0.01
   grad_clip: 1.0
+  warmup_steps: 200
   early_stopping:
     metric: val_ppl
-    patience: 3
+    patience: 5
 
 data:
   train: data/splits/train_v02.csv
-  val: data/splits/val_v02.csv
+  val:   data/splits/val_v02.csv
   max_len: 50
+
+checkpoints_dir: checkpoints/transformer
+results_dir: results/week3
 
 sampling_grid:
   temperature: [0.8, 1.0, 1.2]

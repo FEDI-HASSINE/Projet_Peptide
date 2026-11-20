@@ -11,3 +11,5 @@ AGENTS.md
 # APD6 - redistribution non autorisée explicitement
 /data/raw/naturalAMPs_APD2024a.fasta
 /data/raw/challenge_antibacterial_20261022.fasta
+# Checkpoints : fichiers .pt lourds, non deposes sur le depot
+checkpoints/
