@@ -67,3 +67,36 @@ def test_perplexity_reject_bos_target():
 
     with pytest.raises(ValueError):
         perplexity_from_logits(logits, labels)        
+# ----------------------------------------------------------------------
+# Unigramme positionnel (barre du gate Semaine 3)
+# ----------------------------------------------------------------------
+
+def test_positional_unigram_toy_hand_checked():
+    """Corpus ["AA"] : p(A|0)=p(A|1)=p(EOS|2)=2/22=1/11 -> perplexite 11."""
+    from peplib.metrics_lm import positional_unigram_perplexity
+
+    value = positional_unigram_perplexity(["AA"], ["AA"], alpha=1.0)
+    assert value == pytest.approx(11.0)
+
+
+def test_positional_unigram_is_finite_on_small_corpus():
+    from peplib.metrics_lm import positional_unigram_perplexity
+
+    train = ["ACDE", "ACDF", "GGGG"]
+    val = ["ACDE", "GGGG"]
+    value = positional_unigram_perplexity(train, val, alpha=1.0)
+    assert math.isfinite(value)
+    assert value > 1.0
+
+
+def test_positional_unigram_rejects_bad_input():
+    from peplib.metrics_lm import positional_unigram_perplexity
+
+    with pytest.raises(ValueError):
+        positional_unigram_perplexity([], ["ACDE"])
+    with pytest.raises(ValueError):
+        positional_unigram_perplexity(["ACDE"], [])
+    with pytest.raises(ValueError):
+        positional_unigram_perplexity(["ACDE"], ["ACDE"], alpha=0.0)
+    with pytest.raises(ValueError):
+        positional_unigram_perplexity(["ACDE"], ["ACXDE"])

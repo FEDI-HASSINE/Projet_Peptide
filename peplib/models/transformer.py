@@ -109,7 +109,11 @@ class CausalTransformer(nn.Module):
     # ------------------------------------------------------------------
 
     def _init_weights(self) -> None:
-        """Initialisation Xavier pour les couches linéaires."""
+        """Initialisation Xavier pour les couches linéaires.
+        
+        Attention : head.weight partage le tenseur avec token_emb.weight (weight tying).
+        On ne doit PAS réinitialiser head.weight, sinon on écrase token_emb.
+        """
         nn.init.normal_(self.token_emb.weight, std=0.02)
         if PAD_ID is not None:
             with torch.no_grad():
@@ -118,6 +122,12 @@ class CausalTransformer(nn.Module):
 
         for module in self.modules():
             if isinstance(module, nn.Linear):
+                # head.weight partage son tenseur avec token_emb.weight
+                # (weight tying) : le reinitialiser ecraserait l'embedding.
+                if module is self.head:
+                    if module.bias is not None:
+                        nn.init.zeros_(module.bias)
+                    continue
                 nn.init.xavier_uniform_(module.weight)
                 if module.bias is not None:
                     nn.init.zeros_(module.bias)

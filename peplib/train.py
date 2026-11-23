@@ -30,6 +30,7 @@ import yaml
 from peplib.seed import set_seed
 from peplib.datasets import PeptideDataset
 from peplib.tokenizer import MAX_LEN
+from peplib.traceability import REPO_ROOT, run_metadata
 
 
 # -----------------------------------------------------------------------
@@ -78,6 +79,11 @@ def _build_model(cfg: dict) -> nn.Module:
             max_len=MAX_LEN,
         )
     raise ValueError(f"model.type inconnu : {mtype!r}")
+
+
+def build_model_from_config(cfg: dict) -> nn.Module:
+    """Alias public de _build_model (utilise par scripts/generate_week3.py)."""
+    return _build_model(cfg)
 
 
 # -----------------------------------------------------------------------
@@ -219,7 +225,7 @@ def _save_ckpt(path: Path, model, optimizer, epoch, val_loss, val_pp, cfg, seed)
 
 
 def _load_ckpt(path: Path, model, optimizer, device) -> tuple[int, float]:
-    ckpt = torch.load(path, map_location=device)
+    ckpt = torch.load(path, map_location=device, weights_only=False)
     model.load_state_dict(ckpt["model_state"])
     optimizer.load_state_dict(ckpt["optimizer_state"])
     return ckpt["epoch"] + 1, ckpt["val_loss"]
@@ -230,10 +236,29 @@ def _load_ckpt(path: Path, model, optimizer, device) -> tuple[int, float]:
 # -----------------------------------------------------------------------
 
 def _append_log(csv_path: Path, row: dict) -> None:
+    """Ajoute une ligne au CSV, en tournant le schema change.
+
+    Si le fichier existant n'a pas les memes colonnes (ancien runs.csv de la
+    premiere campagne), il est renomme en ``runs_legacy_<horodatage>.csv``
+    puis un nouveau fichier est cree : aucun melange de schemas, aucune
+    ligne perdue en silence.
+    """
     csv_path.parent.mkdir(parents=True, exist_ok=True)
+    fields = list(row.keys())
     write_header = not csv_path.exists()
+
+    if not write_header:
+        with open(csv_path, newline="", encoding="utf-8") as f:
+            header = next(csv.reader(f), [])
+        if header != fields:
+            stamp = time.strftime("%Y%m%d-%H%M%S")
+            legacy = csv_path.with_name(f"{csv_path.stem}_legacy_{stamp}.csv")
+            csv_path.replace(legacy)
+            write_header = True
+            print(f"[train] Schema runs.csv different -> ancien fichier conserve : {legacy.name}")
+
     with open(csv_path, "a", newline="", encoding="utf-8") as f:
-        writer = csv.DictWriter(f, fieldnames=list(row.keys()))
+        writer = csv.DictWriter(f, fieldnames=fields)
         if write_header:
             writer.writeheader()
         writer.writerow(row)
@@ -319,6 +344,9 @@ def train_model(
     # --- Boucle d'entrainement ---
     first_epoch_time: float | None = None
 
+    # Metadonnees de tracabilite : ecrites sur chaque ligne du CSV.
+    meta = run_metadata(cfg, seed, device.type, REPO_ROOT)
+
     for epoch in range(start_epoch, max_epochs):
         t0 = time.perf_counter()
 
@@ -340,10 +368,10 @@ def train_model(
             f"val_pp={val_pp:.2f} | {elapsed:.1f}s"
         )
 
-        # Log CSV
+        # Log CSV (une ligne par epoch, avec tracabilite complete)
         _append_log(runs_csv, {
+            **meta,
             "model":      mtype,
-            "seed":       seed,
             "epoch":      epoch + 1,
             "train_loss": round(train_loss, 6),
             "val_loss":   round(val_loss, 6),

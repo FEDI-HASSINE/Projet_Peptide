@@ -113,3 +113,55 @@ def test_max_len_respected(small_lstm):
 def test_n_zero_returns_empty(small_lstm):
     seqs = generate_sequences(small_lstm, n=0, seed=0)
     assert seqs == []
+
+# ----------------------------------------------------------------------
+# Tests 6 a 10 : compteurs bruts (P0-2)
+# ----------------------------------------------------------------------
+
+from peplib.generate import generate_with_stats
+
+
+def test_stats_invariants(small_lstm):
+    """n_valid + n_invalid = n_raw = n_attempts, rejets sommes = n_invalid."""
+    stats = generate_with_stats(small_lstm, n=5, seed=7, keep_raw=True)
+
+    assert stats["n_raw"] == stats["n_attempts"]
+    assert stats["n_valid"] + stats["n_invalid"] == stats["n_raw"]
+    assert sum(stats["rejections"].values()) == stats["n_invalid"]
+    assert len(stats["sequences"]) == stats["n_valid"]
+    assert len(stats["raw_sequences"]) == stats["n_raw"]
+    for sequence in stats["sequences"]:
+        assert classify_sequence(sequence) is None
+
+
+def test_stats_matches_legacy_function(small_lstm):
+    """generate_sequences est exactement le meme tirage que generate_with_stats."""
+    legacy = generate_sequences(small_lstm, n=5, seed=11)
+    stats = generate_with_stats(small_lstm, n=5, seed=11)
+    assert legacy == stats["sequences"]
+
+
+def test_stats_budget_epuise(small_lstm):
+    stats = generate_with_stats(small_lstm, n=50, seed=1, max_attempts=1)
+    assert stats["n_attempts"] == 1
+    assert stats["exhausted"] is True
+    assert stats["max_attempts"] == 1
+
+
+def test_stats_n_zero(small_lstm):
+    stats = generate_with_stats(small_lstm, n=0, seed=0)
+    assert stats["sequences"] == []
+    assert stats["n_attempts"] == 0
+    assert stats["exhausted"] is False
+
+
+def test_stats_rejects_negative_n(small_lstm):
+    with pytest.raises(ValueError):
+        generate_with_stats(small_lstm, n=-1)
+    with pytest.raises(ValueError):
+        generate_with_stats(small_lstm, n=1, max_attempts=-5)
+
+
+def test_stats_no_raw_kept_by_default(small_lstm):
+    stats = generate_with_stats(small_lstm, n=2, seed=3)
+    assert stats["raw_sequences"] is None

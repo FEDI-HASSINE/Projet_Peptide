@@ -1,0 +1,6 @@
+{
+    "sonarlint.connectedMode.project": {
+        "connectionId": "fedi-hassine",
+        "projectKey": "FEDI-HASSINE_Projet_Peptide"
+    }
+}
