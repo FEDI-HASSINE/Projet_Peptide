@@ -614,3 +614,34 @@ Les 42 575 séquences du corpus sont couvertes. Une séquence présente dans plu
 - **Variante differee** : couverture **0,70 sur le corpus entier** (K(m)
   tombe a 1 pour m = 10 → dizaines de millions de SW ; reporte, le seuil
   0,70 est mesure exactement par la courbe de fuite).
+
+## Diffusion masquée · Contrôles de données S4
+
+Contrôle local du 28 novembre 2026, horodatage de vérification des splits
+`2026-11-28T10:23:16Z`. Base Git `b03e74b1f34c5caa1a66b6b553a4cbf1ac8d5398`.
+Le code et le tableau mesuré sont identifiés par le commit
+`9fad63517f52dbed1dcc6b130dd862d910642ed0`.
+Windows AMD64, CPU AuthenticAMD Family 25 Model 80, Python 3.13.14,
+PyTorch 2.14.1+cpu, CUDA indisponible.
+
+| Artefact vérifié | SHA-256 des octets |
+|---|---|
+| `data/splits/train_v02.csv` | `f9016bc038ed473870e76e4a849962813ef010ac3079c31e227309aa4349e736` |
+| `data/splits/val_v02.csv` | `f0a17569bf62be16ab931a1f8b47f8c62baad27f509bb62e816aad59f7dbb3a5` |
+| `results/week4/masking_control.csv` | `0e07d7a0f8e1096846f78fed4413b72b064ed4b6fc13acf61400066cc32b5b7a` |
+| `results/week3/baselines_metrics.csv` | `1e024ec69c3ce3ac9185b25b4ccfd614cd86b2376f600a95676442e55d02141b` |
+| `configs/lstm_base.yaml` (S3) | `281dd7ddf3900eb4facf40babcde3c0f6918e3eb9ab4d7c5c28b53454d543715` |
+| `configs/transformer_base.yaml` (S3) | `aea05eeb0a7a8700b8375eeb4ee017a6815a1cdebc5140ef99a46c0b83d3ab86` |
+
+Le contrôle synthétique utilise T = 50, un schedule linéaire, la graine 42 et
+100 000 positions par étape. Le CSV a été reproduit au même SHA-256 après
+normalisation LF. Les effectifs et empreintes train/val concordent avec le
+manifeste v0.2. Le split test est resté fermé.
+
+Configuration d’entraînement S4, SHA-256 canonique du YAML, dates des runs,
+matériel d’entraînement, métriques, manifeste et hashes des checkpoints S4
+sont non disponibles. Les restrictions des sources décrites ci-dessus
+s’appliquent. Les séquences générées et checkpoints restent privés.
+Les données publiées ici se limitent aux comptages synthétiques et métadonnées.
+Le [rapport S4](Docs/Semaine4_rapport.md) précise les exclusions de l’audit
+et les validations expérimentales restantes.
